@@ -1,7 +1,11 @@
 package com.anormalraft.rafts_combat;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.particle.DustParticle;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
@@ -13,7 +17,9 @@ import net.minecraft.world.level.block.TorchBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -74,13 +80,46 @@ public class ExampleMod {
         Vec3 cameraPosition = player.getEyePosition();
         Vec3 viewVector = player.getViewVector(1);
         Vec3 scaledViewVector = viewVector.scale(interactionRange);
+        Vec3 endpoint = cameraPosition.add(scaledViewVector);
         //From GameRenderer.pick
         AABB aabb = player.getBoundingBox().expandTowards(scaledViewVector).inflate(1.0, 1.0, 1.0);
-        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(player, cameraPosition, cameraPosition.add(scaledViewVector), aabb, (e) -> !e.isSpectator() && e.isPickable(), Mth.square(interactionRange));
-        //Particles (jank)
+
+
+        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(player, cameraPosition,endpoint, aabb, (e) -> !e.isSpectator() && e.isPickable(), Mth.square(interactionRange));
+
+        //Particles (jank, replace this with a line)
         Minecraft.getInstance().level.addParticle(ParticleTypes.GUST, cameraPosition.x + 2, cameraPosition.y, cameraPosition.z, 1, 1, 1);
+
+
         if(entityHitResult != null) {
             LOGGER.debug(entityHitResult.toString());
+        }
+    }
+
+    @SubscribeEvent
+    public void onRenderEvent(RenderLevelStageEvent event){
+        if(event.getCamera().getEntity() instanceof Player player){
+            if(player.isShiftKeyDown()) {
+                double interactionRange = player.entityInteractionRange();
+                Vec3 cameraPosition = player.getEyePosition();
+                Vec3 viewVector = player.getViewVector(1);
+                Vec3 scaledViewVector = viewVector.scale(interactionRange);
+                //Endpoint
+                Vec3 endpoint = cameraPosition.add(scaledViewVector);
+
+                Vector3f endpointNormal = endpoint.toVector3f().normalize();
+                //PoseStack
+                PoseStack poseStack = event.getPoseStack();
+                poseStack.pushPose();
+                PoseStack.Pose pose = poseStack.last();
+                //Line (test in RenderLevelStageEvent.AfterWeather instead? to get the posestack then look at fishinghookrenderer)
+                MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+                VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lineStrip());
+                //Vertices
+                vertexBuffer.addVertex(pose, cameraPosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+                vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+                poseStack.popPose();
+            }
         }
     }
 
