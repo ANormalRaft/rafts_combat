@@ -110,28 +110,38 @@ public class ExampleMod {
                 Vec3 scaledViewVector = viewVector.scale(interactionRange);
                 Vec3 endpoint = eyePosition.add(scaledViewVector);
 
-//                Vec3 pointOnPlane = Minecraft.getInstance().gameRenderer.getMainCamera().getNearPlane().getPointOnPlane(1F,0.5F);
-//                Vec3 scaledPOP = pointOnPlane.scale(3);
+                //Calculates an offsetVector of the "player's raycast".
+                double offsetXZ = -0.5;
+                float rotationAngleY = Minecraft.getInstance().gameRenderer.getMainCamera().getYRot() % 360;
+                float rotationAngleXZ = Minecraft.getInstance().gameRenderer.getMainCamera().getXRot() % 360;
+                if(rotationAngleY < 0){
+                    rotationAngleY = 360 + rotationAngleY;
+                }
+                if(rotationAngleXZ < 0){
+                    rotationAngleXZ = 360 + rotationAngleXZ;
+                }
 
-//                Vec3 orthogonal = endpoint.cross(player.getLookAngle());
-//                Vec3 modified = endpoint.add(orthogonal);
+                //XY offset data
+                double angleValueRotY = ((rotationAngleY)/360) * (2*Mth.PI);
+                double sinValueRotY = Mth.sin((float) angleValueRotY);
+                double cosValueRotY = Mth.cos((float) angleValueRotY);
+                if(sinValueRotY >= Mth.PI){
+                    sinValueRotY = -sinValueRotY;
+                }
+                if(cosValueRotY >= Mth.PI){
+                    cosValueRotY = -cosValueRotY;
+                }
+                
+                //Y offset data
+                double offsetY = 0.5;
+                double angleValueRotXZ = ((rotationAngleXZ)/360) * (2*Mth.PI);
+                double sinValueRotXZ = Mth.sin((float) angleValueRotXZ);
+                if(sinValueRotY >= Mth.PI){
+                    sinValueRotXZ = -sinValueRotXZ;
+                }
 
-                //posx = -90
-                //neg z = -180
-                float rotationAngle = Minecraft.getInstance().gameRenderer.getMainCamera().getYRot() % 360;
-                if(rotationAngle < 0){
-                    rotationAngle = 360 + rotationAngle;
-                }
-                double angleValue = ((rotationAngle)/360) * (2*Mth.PI);
-                double sinValue = Mth.sin((float) angleValue);
-                double cosValue = Mth.cos((float) angleValue);
-                if(sinValue >= Mth.PI){
-                    sinValue = -sinValue;
-                }
-                if(cosValue >= Mth.PI){
-                    cosValue = -cosValue;
-                }
-                Vec3 modified = endpoint.add(cosValue * 0.5,0, sinValue * 0.5);
+                //Result
+                Vec3 offsetVector = endpoint.add( (sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY,  (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
 
 
                 //PoseStack
@@ -141,7 +151,7 @@ public class ExampleMod {
                 Vec3 view = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
                 poseStack.translate(-view.x, -view.y, -view.z);
 
-//                LOGGER.info(String.valueOf(rotationAngle));
+//                LOGGER.info(String.valueOf(rotationAngleXZ));
 
                 PoseStack.Pose pose = poseStack.last();
                 //Line (look at FishingHookRenderer or EntityRenderDispatcher)
@@ -149,7 +159,7 @@ public class ExampleMod {
                 VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
                 //Vertices
                 vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-                vertexBuffer.addVertex(pose, modified.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+                vertexBuffer.addVertex(pose, offsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
                 poseStack.popPose();
             }
         }
