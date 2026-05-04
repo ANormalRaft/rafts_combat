@@ -90,8 +90,7 @@ public class ExampleMod {
 
         EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(player, eyePosition,endpoint, aabb, (e) -> !e.isSpectator() && e.isPickable(), Mth.square(interactionRange));
 
-        //Particles (jank, replace this with a line)
-        Minecraft.getInstance().level.addParticle(ParticleTypes.GUST, eyePosition.x + 2, eyePosition.y, eyePosition.z, 1, 1, 1);
+        //Line here?
 
 
         if(entityHitResult != null) {
@@ -99,6 +98,7 @@ public class ExampleMod {
         }
     }
 
+    //TODO: should this go in client?
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event){
         if(event.getCamera().getEntity() instanceof Player player){
