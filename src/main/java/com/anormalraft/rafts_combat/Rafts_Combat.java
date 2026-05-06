@@ -1,42 +1,23 @@
 package com.anormalraft.rafts_combat;
 
 import com.mojang.blaze3d.vertex.*;
-import net.minecraft.client.particle.DustParticle;
-import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.server.level.ServerLevel;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.level.block.TorchBlock;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import org.joml.Vector3f;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.MapColor;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -46,27 +27,21 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraft.client.Minecraft;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static net.minecraft.util.Mth.sin;
+import java.text.DecimalFormat;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
-@Mod(ExampleMod.MODID)
-public class ExampleMod {
+@Mod(Rafts_Combat.MODID)
+public class Rafts_Combat {
     // Define mod id in a common place for everything to reference
     public static final String MODID = "rafts_combat";
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
 
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
-    public ExampleMod(IEventBus modEventBus, ModContainer modContainer) {
+    public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
+        modEventBus.addListener(ModEvents::onRegisterGui);
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (ExampleMod) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
@@ -98,19 +73,37 @@ public class ExampleMod {
         }
     }
 
-    //TODO: should this go in client?
+    //Test vars
+    double oldV = 0;
+    Vec3 oldVector = new Vec3(0,0,0);
+
+    //Helper method to log vector changes
+    public void lofVectorChanges(Logger logger, Vec3 susVector){
+        String eyeX = new DecimalFormat("##.##").format(susVector.x);
+        String eyeY = new DecimalFormat("##.##").format(susVector.y);
+        String eyeZ = new DecimalFormat("##.##").format(susVector.z);
+        if(!eyeX.equals(String.valueOf(oldVector.x)) || !eyeY.equals(String.valueOf(oldVector.y)) || !eyeZ.equals(String.valueOf(oldVector.z))) {
+            logger.info(String.valueOf(susVector));
+            oldVector = new Vec3(Double.parseDouble(eyeX), Double.parseDouble(eyeY), Double.parseDouble(eyeZ));
+        }
+    }
+    
+    //TODO: should this go in a client file?
+    //TODO viewbobbing artifacts? I removed it for now
+    //TODO?: eyePosition doesn't correctly follow the player's y coordinate upon a pose change (crouching, swimming), so the lines render weirdly in first person. Hopefully I can translate the endpoint/offset to draw something on the screen instead of trying to do the impossible
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event){
         if(event.getCamera().getEntity() instanceof Player player){
-            if(player.isShiftKeyDown()) {
+//            if(player.isShiftKeyDown()) {
                 float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
                 double interactionRange = player.entityInteractionRange();
+                //Player raycast (endpoint)
                 Vec3 eyePosition = player.getEyePosition(partialTick);
                 Vec3 viewVector = player.getViewVector(partialTick);
                 Vec3 scaledViewVector = viewVector.scale(interactionRange);
                 Vec3 endpoint = eyePosition.add(scaledViewVector);
 
-                //Calculates an offsetVector of the "player's raycast".
+                //Calculates an offsetVector of the endpoint
                 double offsetXZ = -0.5;
                 float rotationAngleY = Minecraft.getInstance().gameRenderer.getMainCamera().getYRot() % 360;
                 float rotationAngleXZ = Minecraft.getInstance().gameRenderer.getMainCamera().getXRot() % 360;
@@ -143,15 +136,20 @@ public class ExampleMod {
                 //Result
                 Vec3 offsetVector = endpoint.add( (sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY,  (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
 
-
                 //PoseStack
                 PoseStack poseStack = event.getPoseStack();
                 poseStack.pushPose();
                 //Thank you TopSnek & Zergatul from the Forge Forums <3
-                Vec3 view = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-                poseStack.translate(-view.x, -view.y, -view.z);
+                Vec3 mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+                poseStack.translate(-mainCamera.x, -mainCamera.y, -mainCamera.z);
 
-//                LOGGER.info(String.valueOf(rotationAngleXZ));
+//                if(interactionRange != oldV) {
+//                    LOGGER.info(String.valueOf(interactionRange));
+//                    oldV = interactionRange;
+//                }
+                //-7.125762111734555, -58.384265780448914, 3.5958112686656225 cam
+                //-7.125762111734555, -58.37999999523163, 3.5958112686656225 eyepos
+//                lofVectorChanges(LOGGER, mainCamera);
 
                 PoseStack.Pose pose = poseStack.last();
                 //Line (look at FishingHookRenderer or EntityRenderDispatcher)
@@ -159,14 +157,17 @@ public class ExampleMod {
                 VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
                 //Vertices
                 vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-                vertexBuffer.addVertex(pose, offsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+                vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
                 poseStack.popPose();
-            }
+//            }
         }
     }
 
+    //Gui management?
+
+
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
-    @EventBusSubscriber(modid = ExampleMod.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = Rafts_Combat.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     static class ClientModEvents {
         @SubscribeEvent
         static void onClientSetup(FMLClientSetupEvent event) {
