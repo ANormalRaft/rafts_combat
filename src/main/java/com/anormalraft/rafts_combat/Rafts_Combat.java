@@ -209,7 +209,7 @@ public class Rafts_Combat {
 
             //Last Offset from endpoint
             double offsetXZ = -0.5;
-            double offsetY = 0.5;
+            double offsetY = 0;
             Vec3 lastOffsetVector = calculateOffsetVector(offsetXZ, offsetY,endpoint);
             Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
             vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
@@ -219,15 +219,15 @@ public class Rafts_Combat {
             vertexBuffer.addVertex(pose, lastOffsetVectorMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
 
             //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
+            Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
+            Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
             int segmentAmount = 3;
             for(int i = 1; i < segmentAmount; i++){
-                Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
                 Vec3 segment = differenceEndpointLastOffset.scale((double) i/segmentAmount);
                 Vec3 newOffset = endpoint.add(segment);
                 vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
                 vertexBuffer.addVertex(pose, newOffset.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
                 //Mirror
-                Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
                 Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i/segmentAmount);
                 Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
                 vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
@@ -235,6 +235,21 @@ public class Rafts_Combat {
             }
 
             //Render the visible line (quad probably) representing range
+            //Calculate the "always left" vector
+            //TODO: fix artifact(s) when rendering the quad(?) Happens to both the lines and quad, but only happens when the quad is there and seemingly not always
+            Vec3 leftOrthogonalViewVector = calculateOffsetVector(Mth.PI,0, viewVector).normalize();
+            Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.2);
+//            logVectorChanges(LOGGER, viewVector);
+//            logVectorChanges(LOGGER, leftOrthogonalViewVector);
+            //TODO: Y-weirdness with calculateoffsetvector (when offsetY isn't 0)
+            VertexConsumer vertexBufferQuad = bufferSource.getBuffer(RenderType.debugQuads());
+
+            vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+
+            //Turn it red when it detects at least 1 target
 
             poseStack.popPose();
         }
