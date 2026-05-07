@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.anormalraft.rafts_combat.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
+  "client": [
+    "CameraMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
