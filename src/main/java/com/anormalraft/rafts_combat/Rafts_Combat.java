@@ -115,12 +115,13 @@ public class Rafts_Combat {
         //Y offset data
         double angleValueRotXZ = ((rotationAngleXZ)/360) * (2*Mth.PI);
         double sinValueRotXZ = Mth.sin((float) angleValueRotXZ);
+        double cosValueRotXZ = Mth.cos((float) angleValueRotXZ);
         if(sinValueRotY >= Mth.PI){
             sinValueRotXZ = -sinValueRotXZ;
         }
 
         //Result
-        return endpoint.add((sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY,  (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
+        return endpoint.add((sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY * cosValueRotXZ,  (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
     }
 
     //Gets the first person camera's position even if in third person
@@ -151,6 +152,33 @@ public class Rafts_Combat {
         return firstpersonCamera.getPosition();
     }
 
+    //Renders more offset vectors in-between the endpoint and the lastOffsetVector in a line and mirrors them
+    private void renderOffsets(double offsetXZ, double offsetY,Vec3 lastOffsetVector , Vec3 endpoint, Vec3 eyePosition, VertexConsumer vertexBuffer, PoseStack.Pose pose){
+        //Last Offset from endpoint
+        Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
+        vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+        vertexBuffer.addVertex(pose, lastOffsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+        //Mirrored
+        vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+        vertexBuffer.addVertex(pose, lastOffsetVectorMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+
+        //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
+        Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
+        Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
+        int segmentAmount = 3;
+        for(int i = 1; i < segmentAmount; i++){
+            Vec3 segment = differenceEndpointLastOffset.scale((double) i/segmentAmount);
+            Vec3 newOffset = endpoint.add(segment);
+            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBuffer.addVertex(pose, newOffset.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+            //Mirror
+            Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i/segmentAmount);
+            Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
+            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBuffer.addVertex(pose, newOffsetMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+        }
+    }
+
     //Log vector changes
     private void logVectorChanges(Logger logger, Vec3 susVector){
         String eyeX = new DecimalFormat("##.##").format(susVector.x);
@@ -162,86 +190,58 @@ public class Rafts_Combat {
         }
     }
 
+    //                if(interactionRange != oldV) {
+//                    LOGGER.info(String.valueOf(interactionRange));
+//                    oldV = interactionRange;
+//                }
+//                logVectorChanges(LOGGER, eyePosition);
+
     //TODO: should this go in a client file?
     //TODO viewbobbing artifacts? I removed it for now
-    //TODO?: eyePosition doesn't correctly follow the player's y coordinate upon a pose change (crouching, swimming), so the lines render weirdly in first person. Hopefully I can translate the endpoint/offset to draw something on the screen instead of trying to do the impossible
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         if(event.getCamera().getEntity() instanceof Player player){
             float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
             double interactionRange = player.entityInteractionRange();
-
             Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
             Vec3 mainCameraPosition = mainCamera.getPosition();
             Vec3 eyePosition = new Vec3(mainCameraPosition.x, mainCameraPosition.y, mainCameraPosition.z);
+            Vec3 viewVector = player.getViewVector(partialTick);
+            Vec3 scaledViewVector = viewVector.scale(interactionRange);
 
             //Get the first person camera position when in third person(s)
             boolean isFirstPerson = Minecraft.getInstance().options.getCameraType().isFirstPerson();
             if(!isFirstPerson) {
                 eyePosition = getFirstPersonCameraPosition(mainCamera);
             }
-
-            //Player raycast (endpoint)
-            Vec3 viewVector = player.getViewVector(partialTick);
-            Vec3 scaledViewVector = viewVector.scale(interactionRange);
+            //Player raycast (endpoint) position
             Vec3 endpoint = eyePosition.add(scaledViewVector);
 
-            //PoseStack
+            //PoseStack stuff
             PoseStack poseStack = event.getPoseStack();
             poseStack.pushPose();
             //Thank you TopSnek & Zergatul from the Forge Forums <3
             poseStack.translate(-mainCameraPosition.x, -mainCameraPosition.y, -mainCameraPosition.z);
-
-//                if(interactionRange != oldV) {
-//                    LOGGER.info(String.valueOf(interactionRange));
-//                    oldV = interactionRange;
-//                }
-//                logVectorChanges(LOGGER, eyePosition);
-
             PoseStack.Pose pose = poseStack.last();
-            //Line (look at FishingHookRenderer or EntityRenderDispatcher)
+
+            //Line stuff (look at FishingHookRenderer or EntityRenderDispatcher)
             MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-            VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
-
+//            VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
             //Raycast Vertices
-            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+//            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+//            vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
 
-            //Last Offset from endpoint
+            //Offset vectors
             double offsetXZ = -0.5;
-            double offsetY = 0;
-            Vec3 lastOffsetVector = calculateOffsetVector(offsetXZ, offsetY,endpoint);
-            Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
-            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBuffer.addVertex(pose, lastOffsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-            //Mirrored
-            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBuffer.addVertex(pose, lastOffsetVectorMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+            double offsetY = 0.5;
+            Vec3 lastOffsetVector = calculateOffsetVector(offsetXZ, offsetY, endpoint);
+//            renderOffsets(offsetXZ, offsetY, lastOffsetVector, endpoint, eyePosition, vertexBuffer, pose);
 
-            //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
-            Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
-            Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
-            int segmentAmount = 3;
-            for(int i = 1; i < segmentAmount; i++){
-                Vec3 segment = differenceEndpointLastOffset.scale((double) i/segmentAmount);
-                Vec3 newOffset = endpoint.add(segment);
-                vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-                vertexBuffer.addVertex(pose, newOffset.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-                //Mirror
-                Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i/segmentAmount);
-                Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
-                vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-                vertexBuffer.addVertex(pose, newOffsetMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-            }
-
-            //Render the visible line (quad probably) representing range
+            //Render the visible quad representing range
             //Calculate the "always left" vector
-            //TODO: fix artifact(s) when rendering the quad(?) Happens to both the lines and quad, but only happens when the quad is there and seemingly not always
             Vec3 leftOrthogonalViewVector = calculateOffsetVector(Mth.PI,0, viewVector).normalize();
-            Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.2);
-//            logVectorChanges(LOGGER, viewVector);
-//            logVectorChanges(LOGGER, leftOrthogonalViewVector);
-            //TODO: Y-weirdness with calculateoffsetvector (when offsetY isn't 0)
+            Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.1);
+            //TODO: fix artifact(s) (not the end of the world), happens when I .getBuffer() a second time on the buffersource...
             VertexConsumer vertexBufferQuad = bufferSource.getBuffer(RenderType.debugQuads());
 
             vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
