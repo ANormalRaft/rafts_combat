@@ -4,6 +4,7 @@ import com.anormalraft.rafts_combat.mixin.CameraMixin;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -21,6 +22,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.joml.Vector3f;
+import org.lwjgl.opengl.GL11;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -36,11 +38,9 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.common.NeoForge;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.text.DecimalFormat;
-import java.util.Optional;
+
+import static net.minecraft.client.renderer.RenderStateShard.*;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Rafts_Combat.MODID)
@@ -49,11 +49,8 @@ public class Rafts_Combat {
     public static final String MODID = "rafts_combat";
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
-    //Log helpers
-    double oldV = 0;
-    Vec3 oldVector = new Vec3(0,0,0);
-    //Gets the last value from getMaxZoom
-    public static float lastMaxZoom = 0.0F;
+
+    public static RenderType chargeMeterRenderType = RenderType.create("charge_meter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1536, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
 
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
@@ -83,121 +80,15 @@ public class Rafts_Combat {
 
         //Line here?
 
-
         if(entityHitResult != null) {
             LOGGER.debug(entityHitResult.toString());
         }
     }
 
-    //Calculates an offsetVector of the endpoint (+x means left, -x means right of crosshair)
-    private Vec3 calculateOffsetVector(double offsetXZ, double offsetY, Vec3 endpoint){
-        //Calculates an offsetVector of the endpoint
-        float rotationAngleY = Minecraft.getInstance().gameRenderer.getMainCamera().getYRot() % 360;
-        float rotationAngleXZ = Minecraft.getInstance().gameRenderer.getMainCamera().getXRot() % 360;
-        if(rotationAngleY < 0){
-            rotationAngleY = 360 + rotationAngleY;
-        }
-        if(rotationAngleXZ < 0){
-            rotationAngleXZ = 360 + rotationAngleXZ;
-        }
-
-        //XY offset data
-        double angleValueRotY = ((rotationAngleY)/360) * (2*Mth.PI);
-        double sinValueRotY = Mth.sin((float) angleValueRotY);
-        double cosValueRotY = Mth.cos((float) angleValueRotY);
-        if(sinValueRotY >= Mth.PI){
-            sinValueRotY = -sinValueRotY;
-        }
-        if(cosValueRotY >= Mth.PI){
-            cosValueRotY = -cosValueRotY;
-        }
-
-        //Y offset data
-        double angleValueRotXZ = ((rotationAngleXZ)/360) * (2*Mth.PI);
-        double sinValueRotXZ = Mth.sin((float) angleValueRotXZ);
-        double cosValueRotXZ = Mth.cos((float) angleValueRotXZ);
-        if(sinValueRotY >= Mth.PI){
-            sinValueRotXZ = -sinValueRotXZ;
-        }
-
-        //Result
-        return endpoint.add((sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY * cosValueRotXZ,  (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
-    }
-
-    //Gets the first person camera's position even if in third person
-    private Vec3 getFirstPersonCameraPosition(Camera mainCamera) throws NoSuchFieldException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-        boolean isMirroredThirdPerson = Minecraft.getInstance().options.getCameraType().isMirrored();
-        Camera firstpersonCamera = new Camera();
-        Field cameraForwards = firstpersonCamera.getClass().getDeclaredField("forwards");
-        cameraForwards.setAccessible(true);
-        Method setPositionMethod = firstpersonCamera.getClass().getDeclaredMethod("setPosition", Vec3.class);
-        setPositionMethod.setAccessible(true);
-        Method setRotationMethod = firstpersonCamera.getClass().getDeclaredMethod("setRotation", float.class, float.class, float.class);
-        setRotationMethod.setAccessible(true);
-        Method getMaxZoomMethod = firstpersonCamera.getClass().getDeclaredMethod("getMaxZoom", float.class);
-        getMaxZoomMethod.setAccessible(true);
-        Method moveCameraMethod = firstpersonCamera.getClass().getDeclaredMethod("move", float.class, float.class, float.class);
-        moveCameraMethod.setAccessible(true);
-
-        setPositionMethod.invoke(firstpersonCamera, mainCamera.getPosition());
-        setRotationMethod.invoke(firstpersonCamera, mainCamera.getYRot(), mainCamera.getXRot(), mainCamera.getRoll());
-        float zoomValue = lastMaxZoom;
-
-        if(isMirroredThirdPerson){
-            setRotationMethod.invoke(firstpersonCamera,mainCamera.getYRot() + 180.0F, -mainCamera.getXRot(), -mainCamera.getRoll());
-            moveCameraMethod.invoke(firstpersonCamera,-zoomValue,0.0F,0.0F);
-        } else {
-            moveCameraMethod.invoke(firstpersonCamera,zoomValue,0.0F,0.0F);
-        }
-        return firstpersonCamera.getPosition();
-    }
-
-    //Renders more offset vectors in-between the endpoint and the lastOffsetVector in a line and mirrors them
-    private void renderOffsets(double offsetXZ, double offsetY,Vec3 lastOffsetVector , Vec3 endpoint, Vec3 eyePosition, VertexConsumer vertexBuffer, PoseStack.Pose pose){
-        //Last Offset from endpoint
-        Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
-        vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-        vertexBuffer.addVertex(pose, lastOffsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-        //Mirrored
-        vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-        vertexBuffer.addVertex(pose, lastOffsetVectorMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-
-        //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
-        Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
-        Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
-        int segmentAmount = 3;
-        for(int i = 1; i < segmentAmount; i++){
-            Vec3 segment = differenceEndpointLastOffset.scale((double) i/segmentAmount);
-            Vec3 newOffset = endpoint.add(segment);
-            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBuffer.addVertex(pose, newOffset.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-            //Mirror
-            Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i/segmentAmount);
-            Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
-            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBuffer.addVertex(pose, newOffsetMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
-        }
-    }
-
-    //Log vector changes
-    private void logVectorChanges(Logger logger, Vec3 susVector){
-        String eyeX = new DecimalFormat("##.##").format(susVector.x);
-        String eyeY = new DecimalFormat("##.##").format(susVector.y);
-        String eyeZ = new DecimalFormat("##.##").format(susVector.z);
-        if(!eyeX.equals(String.valueOf(oldVector.x)) || !eyeY.equals(String.valueOf(oldVector.y)) || !eyeZ.equals(String.valueOf(oldVector.z))) {
-            logger.info(String.valueOf(susVector));
-            oldVector = new Vec3(Double.parseDouble(eyeX), Double.parseDouble(eyeY), Double.parseDouble(eyeZ));
-        }
-    }
-
-    //                if(interactionRange != oldV) {
-//                    LOGGER.info(String.valueOf(interactionRange));
-//                    oldV = interactionRange;
-//                }
-//                logVectorChanges(LOGGER, eyePosition);
-
+//                VectorUtils.logVectorChanges(LOGGER, eyePosition);
+    //TODO: viewbobbing artifacts? I removed it for now
+    //TODO: FOV changes (sprinting, speed potions)
     //TODO: should this go in a client file?
-    //TODO viewbobbing artifacts? I removed it for now
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         if(event.getCamera().getEntity() instanceof Player player){
@@ -212,7 +103,7 @@ public class Rafts_Combat {
             //Get the first person camera position when in third person(s)
             boolean isFirstPerson = Minecraft.getInstance().options.getCameraType().isFirstPerson();
             if(!isFirstPerson) {
-                eyePosition = getFirstPersonCameraPosition(mainCamera);
+                eyePosition = VectorUtils.getFirstPersonCameraPosition(mainCamera);
             }
             //Player raycast (endpoint) position
             Vec3 endpoint = eyePosition.add(scaledViewVector);
@@ -225,29 +116,30 @@ public class Rafts_Combat {
             PoseStack.Pose pose = poseStack.last();
 
             //Line stuff (look at FishingHookRenderer or EntityRenderDispatcher)
+            //Don't use Tesselator as that is only for GUI
             MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
 //            VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
             //Raycast Vertices
 //            vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-//            vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+//            vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
 
             //Offset vectors
             double offsetXZ = -0.5;
             double offsetY = 0.5;
-            Vec3 lastOffsetVector = calculateOffsetVector(offsetXZ, offsetY, endpoint);
-//            renderOffsets(offsetXZ, offsetY, lastOffsetVector, endpoint, eyePosition, vertexBuffer, pose);
+            Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
+//            VectorUtils.renderOffsets(offsetXZ, offsetY, lastOffsetVector, endpoint, eyePosition, vertexBuffer, pose);
 
             //Render the visible quad representing range
             //Calculate the "always left" vector
-            Vec3 leftOrthogonalViewVector = calculateOffsetVector(Mth.PI,0, viewVector).normalize();
-            Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.1);
-            //TODO: fix artifact(s) (not the end of the world), happens when I .getBuffer() a second time on the buffersource...
-            VertexConsumer vertexBufferQuad = bufferSource.getBuffer(RenderType.debugQuads());
+            Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI,0, viewVector).normalize();
+            Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.05);
+            //TODO?: fix artifact(s) (not the end of the world), happens when I .getBuffer() a second time on the buffersource...
+            VertexConsumer vertexBufferQuad = bufferSource.getBuffer(chargeMeterRenderType);
 
-            vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-            vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 255);
+            vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 0);
+            vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 0);
+            vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 255);
 
             //Turn it red when it detects at least 1 target
 
