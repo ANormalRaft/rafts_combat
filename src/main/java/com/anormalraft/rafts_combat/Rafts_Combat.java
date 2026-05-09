@@ -61,7 +61,7 @@ public class Rafts_Combat {
     //TODO: should this go in a client file?
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
-            ClientTasks.debugRender(event);
+            ClientTasks.progressivelySummonRaycasts(event);
     }
 
 

@@ -10,6 +10,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
@@ -18,6 +19,8 @@ import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
 
 public class VectorUtils {
     //Gets the last value from getMaxZoom
@@ -38,26 +41,17 @@ public class VectorUtils {
         }
 
         //XY offset data
-        double angleValueRotY = ((rotationAngleY)/360) * (2* Mth.PI);
+        double angleValueRotY = ((rotationAngleY)/360) * (2 * Mth.PI);
         double sinValueRotY = Mth.sin((float) angleValueRotY);
         double cosValueRotY = Mth.cos((float) angleValueRotY);
-        if(sinValueRotY >= Mth.PI){
-            sinValueRotY = -sinValueRotY;
-        }
-        if(cosValueRotY >= Mth.PI){
-            cosValueRotY = -cosValueRotY;
-        }
 
         //Y offset data
         double angleValueRotXZ = ((rotationAngleXZ)/360) * (2*Mth.PI);
         double sinValueRotXZ = Mth.sin((float) angleValueRotXZ);
         double cosValueRotXZ = Mth.cos((float) angleValueRotXZ);
-        if(sinValueRotY >= Mth.PI){
-            sinValueRotXZ = -sinValueRotXZ;
-        }
 
         //Result
-        return endpoint.add((sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY * cosValueRotXZ,  (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
+        return endpoint.add((sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY * cosValueRotXZ, (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
     }
 
     //Gets the first person camera's position even if in third person
@@ -89,9 +83,8 @@ public class VectorUtils {
     }
 
     //Renders more offset vectors in-between the endpoint and the lastOffsetVector in a line and mirrors them
-    public static void renderOffsets(double offsetXZ, double offsetY, Vec3 lastOffsetVector , Vec3 eyePosition, Vec3 endpoint, VertexConsumer vertexBuffer, PoseStack.Pose pose){
+    public static void renderOffsets(Vec3 lastOffsetVector , Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, VertexConsumer vertexBuffer, PoseStack.Pose pose){
         //Last Offset from endpoint
-        Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
         vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
         vertexBuffer.addVertex(pose, lastOffsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
         //Mirrored
@@ -127,10 +120,9 @@ public class VectorUtils {
     }
 
     //Same as renderOffsets, but summons raycasts instead and returns a List of EntityHitResults
-    public static List<EntityHitResult> raycastOffsets(double chargeProgressPercentage, double offsetXZ, double offsetY, Vec3 lastOffsetVector , Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
+    public static List<EntityHitResult> raycastOffsets(double chargeProgressPercentage, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
         ArrayList<EntityHitResult> arrayEntityHitResult = new ArrayList<EntityHitResult>();
         //Last Offset from endpoint
-        Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
         //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
         Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
         Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);

@@ -24,19 +24,22 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
-import static net.minecraft.client.renderer.RenderStateShard.POSITION_COLOR_SHADER;
-import static net.minecraft.client.renderer.RenderStateShard.TRANSLUCENT_TRANSPARENCY;
+import static net.minecraft.client.renderer.RenderStateShard.*;
 
 //@Mod(value = "rafts_combat", dist = Dist.CLIENT)
 public class ClientTasks {
+    //further debug lines
+    public static RenderType debugLinesNoDepth = RenderType.create("lines_no_depth",DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 1536,RenderType.CompositeState.builder().setShaderState(RENDERTYPE_LINES_SHADER).setLineState(new RenderStateShard.LineStateShard(OptionalDouble.empty())).setLayeringState(VIEW_OFFSET_Z_LAYERING).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setOutputState(ITEM_ENTITY_TARGET).setWriteMaskState(COLOR_DEPTH_WRITE).setCullState(NO_CULL).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
     //To render my quad correctly
     public static RenderType chargeMeterRenderType = RenderType.create("charge_meter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1536, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
     //Detects click behavior
@@ -45,6 +48,7 @@ public class ClientTasks {
     public static int maxChargeThreshold = -1;
     public static int currentChargeValue = -1;
 
+    //Key input logic
     public static void handleAttack(){
         //Holding down the key
         if(Minecraft.getInstance().options.keyAttack.isDown()) {
@@ -53,8 +57,7 @@ public class ClientTasks {
                 if(currentChargeValue < maxChargeThreshold) {
                     currentChargeValue += 1;
                 }
-                //Calculate vectors (in ClientTasks surely). Check if they work on the server too
-
+                //progressivelySummonRaycasts takes care of the raycast and rendering logic. Check if they work on the server too
             } else {
                 //Enable the swing
                 Player player = Minecraft.getInstance().player;
@@ -65,7 +68,8 @@ public class ClientTasks {
                         if (itemStack.getComponents().has(DataComponents.TOOL)){
                             //Get weapon data here
                              Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
-                             maxChargeThreshold = Mth.floor(20.0 / (int) use_coolown.get().modifier().amount());
+                            double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
+                             maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
                              currentChargeValue = 0;
                             //...Flip the swing boolean
                             ClientTasks.canRaftSwing = true;
@@ -76,9 +80,7 @@ public class ClientTasks {
             //Release the key
         } else if (ClientTasks.canRaftSwing){
             ClientTasks.canRaftSwing = false;
-            //Un-render stuff
-
-            //Attack (separate function surely). Should trigger on hotbar slot switch somehow
+            //Attack (separate function surely). Should also trigger on hotbar slot switch somehow
 
             //Swing (animation)
             //Custom Damage calc
@@ -90,13 +92,13 @@ public class ClientTasks {
     }
 
     public static void progressivelySummonRaycasts(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
-        if(maxChargeThreshold < 0 || currentChargeValue < 0){
-            return;
-        }
-        double chargeProgressPercentage = (double) currentChargeValue /maxChargeThreshold;
         //Needed or else we draw on all stages and some render weirdly
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             if (event.getCamera().getEntity() instanceof Player player) {
+                if(maxChargeThreshold < 0 || currentChargeValue < 0){
+                    return;
+                }
+                double chargeProgressPercentage = (double) currentChargeValue /maxChargeThreshold;
                 float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
                 double interactionRange = player.entityInteractionRange();
                 Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
@@ -118,14 +120,16 @@ public class ClientTasks {
 
                 //Offset vectors
                 double offsetXZ = -0.5;
-                double offsetY = 0.5;
+                double offsetY = 0.0;
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
+                Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
                 //Summons all remaining offsets & get their results
-                List<EntityHitResult> arrayEntityHitResult = VectorUtils.raycastOffsets(chargeProgressPercentage, offsetXZ, offsetY, lastOffsetVector, eyePosition, endpoint, interactionRange, player);
+                List<EntityHitResult> arrayEntityHitResult = VectorUtils.raycastOffsets(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, interactionRange, player);
                 arrayEntityHitResult.add(endpointRaycastResult);
                 //Remove all nulls
                 arrayEntityHitResult.removeIf(Objects::isNull);
 
+                //Quad rendering representing range
                 //PoseStack stuff
                 PoseStack poseStack = event.getPoseStack();
                 poseStack.pushPose();
@@ -136,23 +140,36 @@ public class ClientTasks {
                 MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
                 VertexConsumer vertexBufferQuad = bufferSource.getBuffer(chargeMeterRenderType);
 
-                //Render the visible quad representing range
                 //Calculate the "always left" vector
                 Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI, 0, viewVector).normalize();
                 Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.05);
 
+                //Calculate reveal position
+                Vec3 voidedChargeAccurateOffsetVector = endpoint.vectorTo(lastOffsetVector).scale(chargeProgressPercentage);
+                Vec3 chargeAccurateOffsetVector = endpoint.add(voidedChargeAccurateOffsetVector);
+                Vec3 voidedChargeAccurateOffsetVectorMirrored = endpoint.vectorTo(lastOffsetVectorMirrored).scale(chargeProgressPercentage);
+                Vec3 chargeAccurateOffsetVectorMirrored = endpoint.add(voidedChargeAccurateOffsetVectorMirrored);
+                //Calculate alpha value
+                int maxAlpha = 100;
+                int minAlpha = 0;
+                int currentAlpha = Mth.floor((maxAlpha * chargeProgressPercentage) + minAlpha);
                 //Turn it red when it detects at least 1 target
                 int colorValue = 255;
                 if(!arrayEntityHitResult.isEmpty()){
                     colorValue = 0;
                 }
 
-                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, 0);
-                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, 0);
-                vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, 100);
-                vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, 100);
+                //Add the vertices to the world
+                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+                vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+                vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+                //Mirror it (HOLY FUCK WHY WAS THIS SO HARD TO FIGURE OUT)
+                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+                vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+                vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
 
-//                bufferSource.endBatch(chargeMeterRenderType);
                 poseStack.popPose();
             }
         }
@@ -199,7 +216,7 @@ public class ClientTasks {
 
                 //Line stuff (look at FishingHookRenderer or EntityRenderDispatcher). Don't use Tesselator as that is only for GUI
                 MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-                VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
+                VertexConsumer vertexBuffer = bufferSource.getBuffer(debugLinesNoDepth);
                 //Raycast Vertices
                 vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
                 vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
@@ -208,7 +225,8 @@ public class ClientTasks {
                 double offsetXZ = -0.5;
                 double offsetY = 0.5;
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
-                VectorUtils.renderOffsets(offsetXZ, offsetY, lastOffsetVector, eyePosition, endpoint , vertexBuffer, pose);
+                Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY,endpoint);
+                VectorUtils.renderOffsets(lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint , vertexBuffer, pose);
 //                bufferSource.endBatch(RenderType.lines());
 
                 //Render the visible quad representing range
@@ -222,8 +240,6 @@ public class ClientTasks {
                 vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 0);
                 vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 0);
                 vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 100);
-
-                //Turn it red when it detects at least 1 target
 
 //                bufferSource.endBatch(chargeMeterRenderType);
                 poseStack.popPose();
