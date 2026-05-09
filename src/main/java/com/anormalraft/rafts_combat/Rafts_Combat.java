@@ -58,7 +58,6 @@ public class Rafts_Combat {
 
 //                VectorUtils.logVectorChanges(LOGGER, eyePosition);
     //TODO: viewbobbing artifacts? The solution would be to cancel it once an attack is initiated
-    //TODO: should this go in a client file?
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
             ClientTasks.progressivelySummonRaycasts(event);
