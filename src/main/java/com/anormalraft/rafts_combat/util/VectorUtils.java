@@ -1,10 +1,14 @@
-package com.anormalraft.rafts_combat;
+package com.anormalraft.rafts_combat.util;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.slf4j.Logger;
 
@@ -12,6 +16,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class VectorUtils {
     //Gets the last value from getMaxZoom
@@ -83,7 +89,7 @@ public class VectorUtils {
     }
 
     //Renders more offset vectors in-between the endpoint and the lastOffsetVector in a line and mirrors them
-    public static void renderOffsets(double offsetXZ, double offsetY, Vec3 lastOffsetVector , Vec3 endpoint, Vec3 eyePosition, VertexConsumer vertexBuffer, PoseStack.Pose pose){
+    public static void renderOffsets(double offsetXZ, double offsetY, Vec3 lastOffsetVector , Vec3 eyePosition, Vec3 endpoint, VertexConsumer vertexBuffer, PoseStack.Pose pose){
         //Last Offset from endpoint
         Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
         vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
@@ -109,6 +115,45 @@ public class VectorUtils {
         }
     }
 
+    //Returns the EntityHitResult of a raycast
+    public static EntityHitResult getRaycastResult(Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
+        Vec3 calculatedViewVector = endpoint.add(eyePosition.scale(-1));
+        AABB aabb = player.getBoundingBox().expandTowards(calculatedViewVector).inflate(1.0, 1.0, 1.0);
+        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(player, eyePosition, endpoint, aabb, (e) -> !e.isSpectator() && e.isPickable(), Mth.square(interactionRange));
+//                if (entityHitResult != null) {
+//                    LOGGER.debug(entityHitResult.toString());
+//                }
+        return entityHitResult;
+    }
+
+    //Same as renderOffsets, but summons raycasts instead and returns a List of EntityHitResults
+    public static List<EntityHitResult> raycastOffsets(double chargeProgressPercentage, double offsetXZ, double offsetY, Vec3 lastOffsetVector , Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
+        ArrayList<EntityHitResult> arrayEntityHitResult = new ArrayList<EntityHitResult>();
+        //Last Offset from endpoint
+        Vec3 lastOffsetVectorMirrored = calculateOffsetVector(-offsetXZ, offsetY,endpoint);
+        //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
+        Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
+        Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
+        int segmentAmount = 3;
+
+        for(int i = 1; i < segmentAmount; i++){
+            if((double) i/segmentAmount <= chargeProgressPercentage) {
+                Vec3 segment = differenceEndpointLastOffset.scale((double) i / segmentAmount);
+                Vec3 newOffset = endpoint.add(segment);
+                arrayEntityHitResult.add(getRaycastResult(eyePosition, newOffset, interactionRange, player));
+                //Mirrored
+                Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i / segmentAmount);
+                Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
+                arrayEntityHitResult.add(getRaycastResult(eyePosition, newOffsetMirrored, interactionRange, player));
+            }
+        }
+        if(chargeProgressPercentage == 1){
+            arrayEntityHitResult.add(getRaycastResult(eyePosition, lastOffsetVector, interactionRange, player));
+            arrayEntityHitResult.add(getRaycastResult(eyePosition, lastOffsetVectorMirrored, interactionRange, player));
+        }
+        return arrayEntityHitResult;
+    }
+
     //Log vector changes
     public static void logVectorChanges(Logger logger, Vec3 susVector){
         String eyeX = new DecimalFormat("##.##").format(susVector.x);
@@ -119,11 +164,4 @@ public class VectorUtils {
             oldVector = new Vec3(Double.parseDouble(eyeX), Double.parseDouble(eyeY), Double.parseDouble(eyeZ));
         }
     }
-    //Quad version of the lines in case of quad-unification
-//            VertexConsumer vertexBufferQuad = bufferSource.getBuffer(RenderType.debugQuads());
-//            double quadLineThickness = -0.005;
-//            vertexBufferQuad.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-//            vertexBufferQuad.addVertex(pose, calculateOffsetVector(0, quadLineThickness, endpoint).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-//            vertexBufferQuad.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
-//            vertexBufferQuad.addVertex(pose, calculateOffsetVector(0, quadLineThickness, eyePosition).toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
 }

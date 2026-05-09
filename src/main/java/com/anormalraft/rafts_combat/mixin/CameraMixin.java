@@ -1,7 +1,6 @@
 package com.anormalraft.rafts_combat.mixin;
 
-import com.anormalraft.rafts_combat.Rafts_Combat;
-import com.anormalraft.rafts_combat.VectorUtils;
+import com.anormalraft.rafts_combat.util.VectorUtils;
 import net.minecraft.client.Camera;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
