@@ -1,5 +1,9 @@
 package com.anormalraft.rafts_combat.client;
 
+import com.anormalraft.rafts_combat.networking.ClearListPayload.ClearListPayload;
+import com.anormalraft.rafts_combat.networking.HurtPayload.HurtPayload;
+import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
+import com.anormalraft.rafts_combat.util.DataUtils;
 import com.anormalraft.rafts_combat.util.VectorUtils;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -29,6 +33,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
@@ -38,7 +43,7 @@ import java.util.*;
 import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
-//@Mod(value = "rafts_combat", dist = Dist.CLIENT)
+@Mod(value = "rafts_combat", dist = Dist.CLIENT)
 public class ClientTasks {
 
     //To render my quad correctly (no depth test)
@@ -89,32 +94,22 @@ public class ClientTasks {
                 //TODO: Custom Damage calc Modify mainhanditem damage value?
                 double baseAttackDamage = player.getAttributes().getInstance(Attributes.ATTACK_DAMAGE).getValue();
                 double negativeModifier = -(baseAttackDamage-(baseAttackDamage * ((double) currentChargeValue /maxChargeThreshold)));
+
                 itemStack.getAttributeModifiers().withModifierAdded(Attributes.ATTACK_DAMAGE, new AttributeModifier(ResourceLocation.parse("minecraft:base_attack_damage"), negativeModifier, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND);
                 //TODO: Swing (animation)?
                 //TODO: What happens with sweeping edge?
 
-                //Attack
-                for (EntityHitResult entityHitResult : entityHitResultList) {
-                    //TODO: Figure out why thid doesn't work. Probably needs to be on the server...
-//                    player.attack(entityHitResult.getEntity());
-                    entityHitResult.getEntity().hurt(player.damageSources().playerAttack(player), player.getMainHandItem().getDamageValue());
+                //Attack packet (HurtPayload)
+                //Extract the mob ids from entityHitResultList into an ArrayList of Integers to then send to the server
+                ArrayList<Integer> idArray = new ArrayList<>();
+                for(EntityHitResult entityHitResult : entityHitResultList){
+                    idArray.add(entityHitResult.getEntity().getId());
                 }
+                PacketDistributor.sendToServer(new HurtPayload(idArray));
             }
             //Reset data
             maxChargeThreshold = -1;
             currentChargeValue = -1;
-        }
-    }
-
-    //Adds if there isn't a UUID duplicate and if the raycast result isn't null
-    public static void nonDuplicatesAddToList(ArrayList<EntityHitResult> arrayList, EntityHitResult entityHitResult){
-        if(entityHitResult != null) {
-            for (EntityHitResult element : arrayList) {
-                if (element.getEntity().getUUID() == entityHitResult.getEntity().getUUID()) {
-                    return;
-                }
-            }
-            arrayList.add(entityHitResult);
         }
     }
 
@@ -151,11 +146,12 @@ public class ClientTasks {
                 double offsetY = 0.0;
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
+
                 //Clear list
                 entityHitResultList.clear();
                 //Summons all remaining offsets & get their results
                 VectorUtils.raycastOffsets(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, interactionRange, player, entityHitResultList);
-                nonDuplicatesAddToList(entityHitResultList, endpointRaycastResult);
+                DataUtils.nonDuplicatesAddToList(entityHitResultList, endpointRaycastResult);
                 //Remove all nulls
                 entityHitResultList.removeIf(Objects::isNull);
 

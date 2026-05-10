@@ -1,6 +1,7 @@
 package com.anormalraft.rafts_combat;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
+import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.VectorUtils;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Camera;
@@ -33,6 +34,7 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
@@ -44,9 +46,13 @@ public class Rafts_Combat {
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
 
+    //Network Test
+    public static ArrayList<EntityHitResult> entityHitResultListServer = new ArrayList<>();
+
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
-//        modEventBus.addListener(ModEvents::onRegisterGui);
+        //Register Networking Payloads
+        modEventBus.addListener(PayloadHousekeeping::registerPayload);
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (ExampleMod) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
@@ -56,15 +62,12 @@ public class Rafts_Combat {
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
     }
 
-//                VectorUtils.logVectorChanges(LOGGER, eyePosition);
     //TODO: viewbobbing artifacts? The solution would be to cancel it once an attack is initiated
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
             ClientTasks.progressivelySummonRaycasts(event);
     }
 
-
-    //From Toolforme
     // Event is on the NeoForge event bus only on the physical client
     @SubscribeEvent
     public void onClientTick(ClientTickEvent.Post event) {

@@ -1,6 +1,6 @@
 package com.anormalraft.rafts_combat.util;
 
-import com.anormalraft.rafts_combat.client.ClientTasks;
+import com.anormalraft.rafts_combat.networking.RaycastPayload.RaycastPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
@@ -11,7 +11,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
@@ -19,9 +19,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.List;
-
-import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
 
 public class VectorUtils {
     //Gets the last value from getMaxZoom
@@ -118,6 +115,8 @@ public class VectorUtils {
 //                if (entityHitResult != null) {
 //                    LOGGER.debug(entityHitResult.toString());
 //                }
+        //Pass to server (nonono...)
+//        PacketDistributor.sendToServer(new RaycastPayload(eyePosition, endpoint, interactionRange));
         return entityHitResult;
     }
 
@@ -133,16 +132,16 @@ public class VectorUtils {
             if((double) i/segmentAmount <= chargeProgressPercentage) {
                 Vec3 segment = differenceEndpointLastOffset.scale((double) i / segmentAmount);
                 Vec3 newOffset = endpoint.add(segment);
-                ClientTasks.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, newOffset, interactionRange, player));
+                DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, newOffset, interactionRange, player));
                 //Mirrored
                 Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i / segmentAmount);
                 Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
-                ClientTasks.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, newOffsetMirrored, interactionRange, player));
+                DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, newOffsetMirrored, interactionRange, player));
             }
         }
         if(chargeProgressPercentage == 1){
-            ClientTasks.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, lastOffsetVector, interactionRange, player));
-            ClientTasks.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, lastOffsetVectorMirrored, interactionRange, player));
+            DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, lastOffsetVector, interactionRange, player));
+            DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, lastOffsetVectorMirrored, interactionRange, player));
         }
     }
 
