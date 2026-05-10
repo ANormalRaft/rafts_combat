@@ -17,6 +17,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlotGroup;
@@ -59,6 +60,7 @@ public class ClientTasks {
     //Key input logic
     public static void handleAttack(){
         //Holding down the key
+        //TODO: Impede the use of other items?... (look at Player.isHandsBusy() in Minecraft startAttack)
         if(Minecraft.getInstance().options.keyAttack.isDown()) {
             if(ClientTasks.canRaftSwing){
                 //Start Charging
@@ -67,47 +69,36 @@ public class ClientTasks {
                 }
                 //progressivelySummonRaycasts takes care of the raycast and rendering logic. Check if they work on the server too
             } else {
-                //Enable the swing
+                //Enable the charge
                 Player player = Minecraft.getInstance().player;
                 //If the mainhanditem item is a tool...
-                if (player != null) {
+                if (DataUtils.isHoldingCorrectItem(player)){
                     ItemStack itemStack = player.getMainHandItem();
-                    if (!itemStack.isEmpty()) {
-                        if (itemStack.getComponents().has(DataComponents.TOOL)){
-                            //Get weapon data here & init charge meter data
-                             Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
-                            double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
-                             maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
-                             currentChargeValue = 0;
-                            //...Flip the swing boolean
-                            ClientTasks.canRaftSwing = true;
-                        }
-                    }
+                    //Get weapon data here & init charge meter data
+                     Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
+                    double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
+                     maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
+                     currentChargeValue = 0;
+                    //...Flip the swing boolean
+                    ClientTasks.canRaftSwing = true;
                 }
             }
             //Release the key (Attack)
         } else if (ClientTasks.canRaftSwing){
             Player player = Minecraft.getInstance().player;
             ClientTasks.canRaftSwing = false;
-            ItemStack itemStack = player.getMainHandItem();
-            if (!itemStack.isEmpty()) {
-                //TODO: Custom Damage calc Modify mainhanditem damage value?
-                double baseAttackDamage = player.getAttributes().getInstance(Attributes.ATTACK_DAMAGE).getValue();
-                double negativeModifier = -(baseAttackDamage-(baseAttackDamage * ((double) currentChargeValue /maxChargeThreshold)));
-
-                itemStack.getAttributeModifiers().withModifierAdded(Attributes.ATTACK_DAMAGE, new AttributeModifier(ResourceLocation.parse("minecraft:base_attack_damage"), negativeModifier, AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND);
-                //TODO: Swing (animation)?
-                //TODO: What happens with sweeping edge?
-
+            if (DataUtils.isHoldingCorrectItem(player)) {
+                //Swing animation
+                player.swing(InteractionHand.MAIN_HAND);
                 //Attack packet (HurtPayload)
-                //Extract the mob ids from entityHitResultList into an ArrayList of Integers to then send to the server
+                //Extract the mob ids from entityHitResultList into an ArrayList of Integers to then send to the server. C2SHurtPlayloadHandler applies the damage
                 ArrayList<Integer> idArray = new ArrayList<>();
                 for(EntityHitResult entityHitResult : entityHitResultList){
                     idArray.add(entityHitResult.getEntity().getId());
                 }
                 PacketDistributor.sendToServer(new HurtPayload(idArray));
             }
-            //Reset data
+            //Reset charge data
             maxChargeThreshold = -1;
             currentChargeValue = -1;
         }
