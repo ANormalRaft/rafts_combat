@@ -11,6 +11,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
@@ -38,6 +39,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
@@ -58,47 +60,52 @@ public class ClientTasks {
     public static ArrayList<EntityHitResult> entityHitResultList = new ArrayList<>();
 
     //Key input logic
-    public static void handleAttack(){
-        //Holding down the key
-        //TODO: Impede the use of other items?... (look at Player.isHandsBusy() in Minecraft startAttack)
-        if(Minecraft.getInstance().options.keyAttack.isDown()) {
-            if(ClientTasks.canRaftSwing){
-                //Start Charging
-                if(currentChargeValue < maxChargeThreshold) {
-                    currentChargeValue += 1;
-                }
-                //progressivelySummonRaycasts takes care of the raycast and rendering logic. Check if they work on the server too
-            } else {
-                //Enable the charge
-                Player player = Minecraft.getInstance().player;
-                //If the mainhanditem item is a tool...
-                if (DataUtils.isHoldingCorrectItem(player)){
+    public static void handleAttack() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if(DataUtils.isHoldingCorrectItem(player)) {
+            //Disables the functionality if an item is being used
+            if(player.isUsingItem()){
+                return;
+            }
+            //Handling code
+            //Holding down the key
+            if (Minecraft.getInstance().options.keyAttack.isDown()) {
+                if (ClientTasks.canRaftSwing) {
+                    //Start Charging
+                    if (currentChargeValue < maxChargeThreshold) {
+                        currentChargeValue += 1;
+                    }
+                    //progressivelySummonRaycasts takes care of the raycast and rendering logic
+                } else {
+                    //Enable the charge
+                    //If the mainhanditem item is a tool...
                     ItemStack itemStack = player.getMainHandItem();
                     //Get weapon data here & init charge meter data
-                     Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
+                    Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
                     double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
-                     maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
-                     currentChargeValue = 0;
+                    maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
+                    currentChargeValue = 0;
                     //...Flip the swing boolean
                     ClientTasks.canRaftSwing = true;
                 }
-            }
-            //Release the key (Attack)
-        } else if (ClientTasks.canRaftSwing){
-            Player player = Minecraft.getInstance().player;
-            ClientTasks.canRaftSwing = false;
-            if (DataUtils.isHoldingCorrectItem(player)) {
+                //Release the key (Attack)
+            } else if (ClientTasks.canRaftSwing) {
                 //Swing animation
                 player.swing(InteractionHand.MAIN_HAND);
                 //Attack packet (HurtPayload)
                 //Extract the mob ids from entityHitResultList into an ArrayList of Integers to then send to the server. C2SHurtPlayloadHandler applies the damage
                 ArrayList<Integer> idArray = new ArrayList<>();
-                for(EntityHitResult entityHitResult : entityHitResultList){
+                for (EntityHitResult entityHitResult : entityHitResultList) {
                     idArray.add(entityHitResult.getEntity().getId());
                 }
                 PacketDistributor.sendToServer(new HurtPayload(idArray));
+                //Reset charge data
+                ClientTasks.canRaftSwing = false;
+                maxChargeThreshold = -1;
+                currentChargeValue = -1;
             }
-            //Reset charge data
+        } else {
+            ClientTasks.canRaftSwing = false;
             maxChargeThreshold = -1;
             currentChargeValue = -1;
         }
@@ -133,7 +140,8 @@ public class ClientTasks {
                 EntityHitResult endpointRaycastResult = VectorUtils.getRaycastResult(eyePosition, endpoint, interactionRange, player);
 
                 //Offset vectors
-                double offsetXZ = -0.5;
+                //offsetXZ needs to be negative with my setup due to quad rendering shenanigans probably
+                double offsetXZ = -2.0;
                 double offsetY = 0.0;
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
@@ -146,7 +154,7 @@ public class ClientTasks {
                 //Remove all nulls
                 entityHitResultList.removeIf(Objects::isNull);
 
-                //Quad rendering representing range
+                //Rendering
                 //PoseStack stuff
                 PoseStack poseStack = event.getPoseStack();
                 poseStack.pushPose();
@@ -176,6 +184,7 @@ public class ClientTasks {
                     colorValue = 0;
                 }
 
+                //Quad rendering representing range
                 //Add the vertices to the world
                 vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
                 vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);

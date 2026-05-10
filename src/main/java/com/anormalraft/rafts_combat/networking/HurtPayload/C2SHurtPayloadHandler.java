@@ -25,8 +25,8 @@ public class C2SHurtPayloadHandler {
                 Entity entity = player.level().getEntity(id);
                 if(entity != null) {
                     //TODO: Which one is better? entity.hurt it seems since player.attack is very unpredictable. Will need to put custom damage calculations inDataUtil and use it here for damage calculations. Will also probably need to expand the HurtPayload for the charge data
-                    entity.hurt(context.player().damageSources().playerAttack(context.player()), 4);
-                    //                    player.attack(entity);
+//                    entity.hurt(context.player().damageSources().playerAttack(context.player()), 4);
+                    player.attack(entity);
                 }
             }
         }).exceptionally(e -> {

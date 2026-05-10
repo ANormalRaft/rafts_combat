@@ -46,9 +46,6 @@ public class Rafts_Combat {
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    //Network Test
-    public static ArrayList<EntityHitResult> entityHitResultListServer = new ArrayList<>();
-
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
         //Register Networking Payloads
@@ -72,5 +69,13 @@ public class Rafts_Combat {
     @SubscribeEvent
     public void onClientTick(ClientTickEvent.Post event) {
         ClientTasks.handleAttack();
+    }
+
+    //Cancel right click item interactions when an attack is queued
+    @SubscribeEvent
+    public void onPlayerInteractRightClick(PlayerInteractEvent.RightClickItem event){
+        if(ClientTasks.canRaftSwing){
+            event.setCanceled(true);
+        }
     }
 }

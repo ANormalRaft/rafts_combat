@@ -54,8 +54,6 @@ public class VectorUtils {
     public static Vec3 getFirstPersonCameraPosition(Camera mainCamera) throws NoSuchFieldException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         boolean isMirroredThirdPerson = Minecraft.getInstance().options.getCameraType().isMirrored();
         Camera firstpersonCamera = new Camera();
-        Field cameraForwards = firstpersonCamera.getClass().getDeclaredField("forwards");
-        cameraForwards.setAccessible(true);
         Method setPositionMethod = firstpersonCamera.getClass().getDeclaredMethod("setPosition", Vec3.class);
         setPositionMethod.setAccessible(true);
         Method setRotationMethod = firstpersonCamera.getClass().getDeclaredMethod("setRotation", float.class, float.class, float.class);

@@ -27,7 +27,7 @@ public class ClearListPayload implements CustomPacketPayload {
 
     public void handleDataOnMain(IPayloadContext context) {
         context.enqueueWork(() -> {
-            Rafts_Combat.entityHitResultListServer.clear();
+            //Nothing
         }).exceptionally(e -> {
             context.disconnect(Component.literal(e.getMessage()));
             return null;
