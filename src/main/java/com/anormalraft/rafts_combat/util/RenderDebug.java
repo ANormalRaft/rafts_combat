@@ -26,9 +26,11 @@ import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
 import static net.minecraft.client.renderer.RenderStateShard.*;
 import static net.minecraft.client.renderer.RenderStateShard.NO_CULL;
 
+//Unused, for debugging purposes
 public class RenderDebug {
     //Debug lines but no depth test
     public static RenderType debugLinesNoDepth = RenderType.create("lines_no_depth", DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 1536,RenderType.CompositeState.builder().setShaderState(RENDERTYPE_LINES_SHADER).setLineState(new RenderStateShard.LineStateShard(OptionalDouble.empty())).setLayeringState(VIEW_OFFSET_Z_LAYERING).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setOutputState(ITEM_ENTITY_TARGET).setWriteMaskState(COLOR_DEPTH_WRITE).setCullState(NO_CULL).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
+
     //For debugging only
     public static void debugRender(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         //Needed or else we draw on all stages and some render weirdly

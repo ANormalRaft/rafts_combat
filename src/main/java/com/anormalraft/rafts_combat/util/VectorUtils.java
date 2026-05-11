@@ -6,17 +6,21 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.*;
 import org.slf4j.Logger;
-
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.UUID;
+
+import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
 
 public class VectorUtils {
     //Gets the last value from getMaxZoom
@@ -102,18 +106,42 @@ public class VectorUtils {
         }
     }
 
+    //Pet check and Horse-like check
+    public static boolean isNotPet(Entity entity, Entity player){
+        //If the entity can either be owned or tamed
+        if(entity instanceof OwnableEntity){
+            //If it is owned, return false
+            LivingEntity owner = ((OwnableEntity) entity).getOwner();
+            if(owner != null) {
+                return owner.getId() != player.getId();
+            }
+            //If it doesn't target the player and it extends from AbstractHorse and it is tamed, return false
+            if(entity instanceof AbstractHorse){
+                boolean isTargetingPlayer = false;
+                if(((Mob) entity).getTarget() != null) {
+                    isTargetingPlayer =  ((Mob) entity).getTarget().getId() == player.getId();
+                }
+                return !((AbstractHorse) entity).isTamed() && !isTargetingPlayer;
+            }
+        }
+        return true;
+    }
+
     //Returns the EntityHitResult of a raycast
     public static EntityHitResult getRaycastResult(Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
-        //TODO: config to ignore players?
-        Vec3 calculatedViewVector = endpoint.add(eyePosition.scale(-1));
+        //Checks for block collisions first so that the raycasts don't go through walls
+        ClipContext clipContext = new ClipContext(eyePosition, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
+        BlockHitResult blockHitResult = player.level().clip(clipContext);
+        Vec3 calculatedViewVector;
+        Vec3 finalLocation = new Vec3(endpoint.toVector3f());
+        if(blockHitResult.getType() != HitResult.Type.MISS) {
+            finalLocation = blockHitResult.getLocation();
+        }
+        calculatedViewVector = finalLocation.add(eyePosition.scale(-1));
+
+        //TODO LATE: Maybe a boolean to check if you are the endpoint vector vs offset to enable that one only for crits? (this would require changing the return type to a map or set with the entityHitResult and the crit boolean)
         AABB aabb = player.getBoundingBox().expandTowards(calculatedViewVector).inflate(1.0, 1.0, 1.0);
-        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(player, eyePosition, endpoint, aabb, (e) -> !e.isSpectator() && e.isPickable(), Mth.square(interactionRange));
-//                if (entityHitResult != null) {
-//                    LOGGER.debug(entityHitResult.toString());
-//                }
-        //Pass to server (nonono...)
-//        PacketDistributor.sendToServer(new RaycastPayload(eyePosition, endpoint, interactionRange));
-        return entityHitResult;
+        return ProjectileUtil.getEntityHitResult(player, eyePosition, finalLocation, aabb, (e) -> !e.isSpectator() && e.isPickable() && isNotPet(e, player), Mth.square(interactionRange));
     }
 
     //Same as renderOffsets, but summons raycasts instead and returns a List of EntityHitResults

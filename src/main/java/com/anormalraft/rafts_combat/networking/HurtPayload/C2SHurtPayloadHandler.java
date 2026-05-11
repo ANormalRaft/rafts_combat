@@ -19,12 +19,12 @@ public class C2SHurtPayloadHandler {
         // Do something with the data, on the main thread
         context.enqueueWork(()-> {
             Player player = context.player();
-
             //Thank you XFactHD for this idea
             for (Integer id : data.idList()) {
                 Entity entity = player.level().getEntity(id);
                 if(entity != null) {
                     //TODO: Which one is better? entity.hurt it seems since player.attack is very unpredictable. Will need to put custom damage calculations inDataUtil and use it here for damage calculations. Will also probably need to expand the HurtPayload for the charge data
+                    //TODO LATE: Knockback modification as well, probably in DataUtils
 //                    entity.hurt(context.player().damageSources().playerAttack(context.player()), 4);
                     player.attack(entity);
                 }

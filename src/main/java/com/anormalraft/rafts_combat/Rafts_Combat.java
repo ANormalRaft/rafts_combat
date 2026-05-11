@@ -2,41 +2,19 @@ package com.anormalraft.rafts_combat;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
-import com.anormalraft.rafts_combat.util.VectorUtils;
-import com.mojang.blaze3d.vertex.*;
-import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import org.lwjgl.opengl.GL11;
 import org.slf4j.Logger;
-
 import com.mojang.logging.LogUtils;
-
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
-import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.common.NeoForge;
-
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 
-import static net.minecraft.client.renderer.RenderStateShard.*;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Rafts_Combat.MODID)
