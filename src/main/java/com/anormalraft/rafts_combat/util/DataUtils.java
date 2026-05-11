@@ -1,6 +1,11 @@
 package com.anormalraft.rafts_combat.util;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.OwnableEntity;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.EntityHitResult;
@@ -31,6 +36,27 @@ public class DataUtils {
             }
         }
         return false;
+    }
+
+    //Pet check and Horse-like check
+    public static boolean isNotPet(Entity entity, Entity player){
+        //If the entity can either be owned or tamed
+        if(entity instanceof OwnableEntity){
+            //If it is owned, return false
+            LivingEntity owner = ((OwnableEntity) entity).getOwner();
+            if(owner != null) {
+                return owner.getId() != player.getId();
+            }
+            //If it doesn't target the player and it extends from AbstractHorse and it is tamed, return false
+            if(entity instanceof AbstractHorse){
+                boolean isTargetingPlayer = false;
+                if(((Mob) entity).getTarget() != null) {
+                    isTargetingPlayer =  ((Mob) entity).getTarget().getId() == player.getId();
+                }
+                return !((AbstractHorse) entity).isTamed() && !isTargetingPlayer;
+            }
+        }
+        return true;
     }
 
     //TODO: Damage calc

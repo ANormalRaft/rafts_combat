@@ -5,7 +5,8 @@
   "mixins": [],
   "client": [
     "AttackCancelMinecraftMixin",
-    "CameraMixin"
+    "CameraMixin",
+    "CancelStartDestroyMultiPlayerGameModeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

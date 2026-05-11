@@ -16,6 +16,7 @@ public class AttackCancelMinecraftMixin {
 
     @Shadow @Nullable public LocalPlayer player;
 
+    //This prevents an attack from being launched when fast left clicking
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
     public void cancelAttack(CallbackInfoReturnable<Boolean> cir){
         if(DataUtils.isHoldingCorrectItem(player)){

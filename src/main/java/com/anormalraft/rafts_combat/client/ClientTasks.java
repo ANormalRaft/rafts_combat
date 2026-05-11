@@ -47,8 +47,7 @@ public class ClientTasks {
     //List of hit targets
     public static ArrayList<EntityHitResult> entityHitResultList = new ArrayList<>();
 
-    //TODO: Switching from creative to survival massively changes the position of our range/quads...
-    //TODO LATE: How do I handle tools which need the same input? Probably a raycast again but with HitResult instead to enable the mining state (which will have similar logic)
+    //TODO: How do I handle tools which need the same input? Probably a raycast again but with HitResult instead to enable the mining state (which will have similar logic). Either here or CancalStart mixin (either way, will be in mixin some way or another)
     //Key input logic
     public static void handleAttack() {
         LocalPlayer player = Minecraft.getInstance().player;
@@ -131,7 +130,9 @@ public class ClientTasks {
 
                 //Offset vectors
                 //offsetXZ needs to be negative with my setup due to quad rendering shenanigans probably
-                double offsetXZ = -2.0;
+                //Has to be scaled with a ratio from the interactionRange
+                double turnRatio = 2.0/5.0;
+                double offsetXZ = -(interactionRange * turnRatio);
                 double offsetY = 0.0;
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
@@ -145,13 +146,13 @@ public class ClientTasks {
                 entityHitResultList.removeIf(Objects::isNull);
 
                 //Rendering
-                renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage);
+                renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange);
             }
         }
     }
 
     //Renders the quads and performs the calculations required to render them
-    public static void renderQuads(RenderLevelStageEvent event, Vec3 mainCameraPosition, Vec3 viewVector, Vec3 endpoint, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, double chargeProgressPercentage){
+    public static void renderQuads(RenderLevelStageEvent event, Vec3 mainCameraPosition, Vec3 viewVector, Vec3 endpoint, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, double chargeProgressPercentage, double interactionRange){
         //PoseStack stuff
         PoseStack poseStack = event.getPoseStack();
         poseStack.pushPose();
@@ -164,7 +165,9 @@ public class ClientTasks {
 
         //Calculate the "always left" vector
         Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI, 0, viewVector).normalize();
-        Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.05);
+        //The scale must be a ratio from the interaction range to keep its "zoom"
+        double quadHeight = interactionRange * 7/1000;
+        Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(quadHeight);
 
         //Calculate reveal position
         Vec3 voidedChargeAccurateOffsetVector = endpoint.vectorTo(lastOffsetVector).scale(chargeProgressPercentage);
