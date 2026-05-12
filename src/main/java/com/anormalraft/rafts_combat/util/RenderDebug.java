@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -30,6 +31,10 @@ import static net.minecraft.client.renderer.RenderStateShard.NO_CULL;
 public class RenderDebug {
     //Debug lines but no depth test
     public static RenderType debugLinesNoDepth = RenderType.create("lines_no_depth", DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 1536,RenderType.CompositeState.builder().setShaderState(RENDERTYPE_LINES_SHADER).setLineState(new RenderStateShard.LineStateShard(OptionalDouble.empty())).setLayeringState(VIEW_OFFSET_Z_LAYERING).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setOutputState(ITEM_ENTITY_TARGET).setWriteMaskState(COLOR_DEPTH_WRITE).setCullState(NO_CULL).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
+
+    //Test
+    public static float trueF1 = 0;
+    public static float trueF2 = 0;
 
     //For debugging only
     public static void debugRender(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
@@ -66,6 +71,19 @@ public class RenderDebug {
                 //PoseStack stuff
                 PoseStack poseStack = event.getPoseStack();
                 poseStack.pushPose();
+
+                //Inverse viewbob tests
+                double[] sinCosValuesArray = VectorUtils.sinCosAngleValues();
+
+                float f = player.walkDist - player.walkDistO;
+                float f1 = -(player.walkDist + f * partialTick);
+                float f2 = Mth.lerp(partialTick, player.oBob, player.bob);
+
+                poseStack.translate((Math.abs(Mth.cos(f1 * (float)Math.PI) * f2) * sinCosValuesArray[3-1] * -sinCosValuesArray[1-1]) + ((Mth.sin(f1 * (float)Math.PI) * f2 * 0.5F) * sinCosValuesArray[2-1]), (Math.abs(Mth.cos(f1 * (float)Math.PI) * f2) * sinCosValuesArray[4-1]), (Math.abs(Mth.cos(f1 * (float)Math.PI) * f2) * sinCosValuesArray[3-1] * sinCosValuesArray[2-1]) + ((Mth.sin(f1 * (float)Math.PI) * f2 * 0.5F) * sinCosValuesArray[1-1]));
+
+//                poseStack.mulPose(Axis.XN.rotationDegrees(Math.abs(Mth.cos(f1 * (float)Math.PI - 0.2F) * f2) * 5.0F));
+//                poseStack.mulPose(Axis.ZN.rotationDegrees((float) ((Mth.sin(trueF1 * (float)Math.PI) * trueF2 * 3.0F))));
+
                 //Thank you TopSnek & Zergatul from the Forge Forums <3
                 poseStack.translate(-mainCameraPosition.x, -mainCameraPosition.y, -mainCameraPosition.z);
                 PoseStack.Pose pose = poseStack.last();
@@ -94,7 +112,7 @@ public class RenderDebug {
 
                 vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 100);
                 vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 0);
-                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 0);
+                vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 255);
                 vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, 255, 255, 100);
 
 //                bufferSource.endBatch(chargeMeterRenderType);

@@ -3,6 +3,8 @@ package com.anormalraft.rafts_combat;
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
+import com.anormalraft.rafts_combat.util.RenderDebug;
+import net.minecraft.client.Minecraft;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -49,12 +51,16 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SHOVELS, BlockTags.MINEABLE_WITH_SHOVEL);
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.HOES, BlockTags.MINEABLE_WITH_HOE);
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
+        //Sets view bobbing off or else the rendering gets really wonky. This is the botched solution cause reversing viewbobbing has proved ineffective. Turning viewbobbing on and off is worse since it moves the camera vertically too much
+//        Minecraft.getInstance().options.bobView().set(false);
     }
 
-    //TODO: viewbobbing artifacts? The solution would be to cancel it once an attack is initiated
+    //TODO list: charge speed, Damage calculation, crits, Configs, Server test
+
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
-            ClientTasks.progressivelySummonRaycasts(event);
+        ClientTasks.progressivelySummonRaycasts(event);
+//        RenderDebug.debugRender(event);
     }
 
     // Event is on the NeoForge event bus only on the physical client

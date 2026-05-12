@@ -6,7 +6,8 @@
   "client": [
     "AttackCancelMinecraftMixin",
     "CameraMixin",
-    "CancelStartDestroyMultiPlayerGameModeMixin"
+    "CancelStartDestroyMultiPlayerGameModeMixin",
+    "ViewBobbingGameRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

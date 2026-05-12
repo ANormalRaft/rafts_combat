@@ -1,8 +1,6 @@
 package com.anormalraft.rafts_combat.util;
 
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;

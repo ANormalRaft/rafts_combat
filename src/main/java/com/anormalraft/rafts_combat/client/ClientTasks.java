@@ -9,7 +9,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
@@ -17,8 +16,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -55,7 +52,7 @@ public class ClientTasks {
     public static ArrayList<EntityHitResult> entityHitResultList = new ArrayList<>();
     //Mining lock for first click. The block retaining its destruction status after a re-hover whilst keeping holding down the attack key is actually vanilla behavior lol
     public static boolean canMineFirstClick = false;
-    
+
     //Key input logic
     public static void handleAttack() {
         LocalPlayer player = Minecraft.getInstance().player;
@@ -181,16 +178,28 @@ public class ClientTasks {
                 entityHitResultList.removeIf(Objects::isNull);
 
                 //Rendering
-                renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange);
+                renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange, player, partialTick);
             }
         }
     }
 
     //Renders the quads and performs the calculations required to render them
-    public static void renderQuads(RenderLevelStageEvent event, Vec3 mainCameraPosition, Vec3 viewVector, Vec3 endpoint, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, double chargeProgressPercentage, double interactionRange){
+    public static void renderQuads(RenderLevelStageEvent event, Vec3 mainCameraPosition, Vec3 viewVector, Vec3 endpoint, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, double chargeProgressPercentage, double interactionRange, Player player, float partialTick){
         //PoseStack stuff
         PoseStack poseStack = event.getPoseStack();
         poseStack.pushPose();
+
+        //ViewBobbing (doesn't do roll transformations. These are cancelled with the ViewBobbingGameRendererMixin)
+        if(Minecraft.getInstance().options.bobView().get()) {
+            double[] sinCosValuesArray = VectorUtils.sinCosAngleValues();
+
+            float f = player.walkDist - player.walkDistO;
+            float f1 = -(player.walkDist + f * partialTick);
+            float f2 = Mth.lerp(partialTick, player.oBob, player.bob);
+
+            poseStack.translate((Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * -sinCosValuesArray[1 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[2 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[4 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * sinCosValuesArray[2 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[1 - 1]));
+        }
+
         //Thank you TopSnek & Zergatul from the Forge Forums <3
         poseStack.translate(-mainCameraPosition.x, -mainCameraPosition.y, -mainCameraPosition.z);
         PoseStack.Pose pose = poseStack.last();

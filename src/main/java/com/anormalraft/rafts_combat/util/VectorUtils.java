@@ -28,16 +28,20 @@ public class VectorUtils {
     //Log helper for vectors
     static Vec3 oldVector = new Vec3(0,0,0);
 
-    //Calculates an offsetVector of the endpoint (+x means left, -x means right of crosshair)
-    public static Vec3 calculateOffsetVector(double offsetXZ, double offsetY, Vec3 endpoint){
-        //Calculates an offsetVector of the endpoint
-        float rotationAngleY = Minecraft.getInstance().gameRenderer.getMainCamera().getYRot() % 360;
-        float rotationAngleXZ = Minecraft.getInstance().gameRenderer.getMainCamera().getXRot() % 360;
+    //Calculates useful sin cos values for vector offset calculations
+    public static double[] sinCosAngleValues(){
+        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        float rotationAngleY = camera.getYRot() % 360;
+        float rotationAngleXZ = camera.getXRot() % 360;
+        float rotationAngleRoll = camera.getRoll() % 360;
         if(rotationAngleY < 0){
             rotationAngleY = 360 + rotationAngleY;
         }
         if(rotationAngleXZ < 0){
             rotationAngleXZ = 360 + rotationAngleXZ;
+        }
+        if(rotationAngleRoll < 0){
+            rotationAngleRoll = 360 + rotationAngleRoll;
         }
 
         //XY offset data
@@ -50,8 +54,21 @@ public class VectorUtils {
         double sinValueRotXZ = Mth.sin((float) angleValueRotXZ);
         double cosValueRotXZ = Mth.cos((float) angleValueRotXZ);
 
+        //Unused but probably helpful for future
+        double angleValueRotRoll = ((rotationAngleRoll)/360) * (2 * Mth.PI);
+        double sinValueRotRoll = Mth.sin((float) angleValueRotRoll);
+        double cosValueRotRoll = Mth.cos((float) angleValueRotRoll);
+
+        return new double[]{sinValueRotY, cosValueRotY, sinValueRotXZ, cosValueRotXZ, sinValueRotRoll, cosValueRotRoll};
+    }
+
+    //Calculates an offsetVector of the endpoint (+x means left, -x means right of crosshair)
+    public static Vec3 calculateOffsetVector(double offsetXZ, double offsetY, Vec3 endpoint){
+        //Calculates an offsetVector of the endpoint
+        double[] sinCosValuesArray = sinCosAngleValues();
+
         //Result
-        return endpoint.add((sinValueRotXZ * -sinValueRotY * offsetY) + (cosValueRotY * offsetXZ), offsetY * cosValueRotXZ, (sinValueRotXZ * cosValueRotY * offsetY) + (sinValueRotY * offsetXZ));
+        return endpoint.add((sinCosValuesArray[3-1] * -sinCosValuesArray[1-1] * offsetY) + (sinCosValuesArray[2-1] * offsetXZ), offsetY * sinCosValuesArray[4-1], (sinCosValuesArray[3-1] * sinCosValuesArray[2-1] * offsetY) + (sinCosValuesArray[1-1] * offsetXZ));
     }
 
     //Gets the first person camera's position even if in third person
