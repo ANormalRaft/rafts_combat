@@ -106,11 +106,16 @@ public class VectorUtils {
         }
     }
 
+    //Raycasts for block collision detection
+    public static BlockHitResult getRaycastResultBlock(Vec3 eyePosition, Vec3 endpoint, Entity player){
+        ClipContext clipContext = new ClipContext(eyePosition, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
+        return player.level().clip(clipContext);
+    }
+
     //Returns the EntityHitResult of a raycast
     public static EntityHitResult getRaycastResult(Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
         //Checks for block collisions first so that the raycasts don't go through walls
-        ClipContext clipContext = new ClipContext(eyePosition, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
-        BlockHitResult blockHitResult = player.level().clip(clipContext);
+        BlockHitResult blockHitResult = getRaycastResultBlock(eyePosition, endpoint, player);
         Vec3 calculatedViewVector;
         Vec3 finalLocation = new Vec3(endpoint.toVector3f());
         if(blockHitResult.getType() != HitResult.Type.MISS) {

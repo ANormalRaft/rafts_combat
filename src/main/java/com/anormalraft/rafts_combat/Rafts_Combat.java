@@ -2,8 +2,12 @@ package com.anormalraft.rafts_combat;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
+import com.anormalraft.rafts_combat.util.DataUtils;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
@@ -35,6 +39,16 @@ public class Rafts_Combat {
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+    }
+
+    //Sync config if needed in future and also init the hashmap in DataUtils
+    @SubscribeEvent
+    public void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.AXES, BlockTags.MINEABLE_WITH_AXE);
+        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.PICKAXES, BlockTags.MINEABLE_WITH_PICKAXE);
+        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SHOVELS, BlockTags.MINEABLE_WITH_SHOVEL);
+        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.HOES, BlockTags.MINEABLE_WITH_HOE);
+        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
     //TODO: viewbobbing artifacts? The solution would be to cancel it once an attack is initiated

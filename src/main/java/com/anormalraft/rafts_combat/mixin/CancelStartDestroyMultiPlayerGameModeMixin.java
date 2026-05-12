@@ -1,6 +1,8 @@
 package com.anormalraft.rafts_combat.mixin;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
+import com.anormalraft.rafts_combat.util.DataUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,8 +17,10 @@ public class CancelStartDestroyMultiPlayerGameModeMixin {
     //TODO: Will need a raycast for tools in ClientTasks. canRaftSwing is temporary
     @Inject(method = "startDestroyBlock", at=@At("HEAD"), cancellable = true)
     public void cancelStartDestroy(BlockPos loc, Direction face, CallbackInfoReturnable<Boolean> cir){
-        if(ClientTasks.canRaftSwing) {
-            cir.setReturnValue(false);
+        if(DataUtils.isHoldingCorrectItem(Minecraft.getInstance().player)){
+            if(!ClientTasks.canMineFirstClick) {
+                cir.setReturnValue(false);
+            }
         }
     }
 }

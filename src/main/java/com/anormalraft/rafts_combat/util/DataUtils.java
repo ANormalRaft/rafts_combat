@@ -1,19 +1,29 @@
 package com.anormalraft.rafts_combat.util;
 
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.EntityHitResult;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 //Helper methods that manipulate or check data
 public class DataUtils {
+
+    public static HashMap<TagKey<Item>, TagKey<Block>> itemTagsBlockTagsHashMap = new HashMap<>(5);
 
     //Adds if there isn't an Entity id duplicate and if the raycast result isn't null
     public static void nonDuplicatesAddToList(ArrayList<EntityHitResult> arrayList, EntityHitResult entityHitResult) {
@@ -57,6 +67,16 @@ public class DataUtils {
             }
         }
         return true;
+    }
+
+    //Compares block tag and item tag for an ANY match
+    public static boolean tagMatchAny(ItemStack itemStack, BlockState blockState){
+        for (Map.Entry<TagKey<Item>,TagKey<Block>> entry : itemTagsBlockTagsHashMap.entrySet()){
+            if(itemStack.is(entry.getKey()) && blockState.is(entry.getValue())){
+                return true;
+            }
+        }
+        return false;
     }
 
     //TODO: Damage calc

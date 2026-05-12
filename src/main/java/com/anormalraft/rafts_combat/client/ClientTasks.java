@@ -9,18 +9,25 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
@@ -46,8 +53,9 @@ public class ClientTasks {
     public static int currentChargeValue = -1;
     //List of hit targets
     public static ArrayList<EntityHitResult> entityHitResultList = new ArrayList<>();
-
-    //TODO: How do I handle tools which need the same input? Probably a raycast again but with HitResult instead to enable the mining state (which will have similar logic). Either here or CancalStart mixin (either way, will be in mixin some way or another)
+    //Mining lock for first click. The block retaining its destruction status after a re-hover whilst keeping holding down the attack key is actually vanilla behavior lol
+    public static boolean canMineFirstClick = false;
+    
     //Key input logic
     public static void handleAttack() {
         LocalPlayer player = Minecraft.getInstance().player;
@@ -56,29 +64,51 @@ public class ClientTasks {
             if(player.isUsingItem()){
                 return;
             }
-            //Handling code
+            //Mod functionality
             //Holding down the key
             if (Minecraft.getInstance().options.keyAttack.isDown()) {
-                if (ClientTasks.canRaftSwing) {
-                    //Start Charging
-                    if (currentChargeValue < maxChargeThreshold) {
-                        currentChargeValue += 1;
+                //Lets tools mine their respective blocks if one is targeted with the starting click and we are not charging
+                if(!canRaftSwing){
+                    double interactionRange = player.entityInteractionRange();
+                    Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
+                    Vec3 mainCameraPosition = mainCamera.getPosition();
+                    Vec3 eyePosition = new Vec3(mainCameraPosition.x, mainCameraPosition.y, mainCameraPosition.z);
+                    Vec3 viewVector = player.getViewVector(1);
+                    Vec3 scaledViewVector = viewVector.scale(interactionRange);
+                    BlockHitResult blockHitResult = VectorUtils.getRaycastResultBlock(eyePosition, eyePosition.add(scaledViewVector), player);
+                    if(blockHitResult.getType() != HitResult.Type.MISS){
+                        ItemStack itemStack = player.getMainHandItem();
+                        BlockPos blockPos = blockHitResult.getBlockPos();
+                        BlockState blockState = Minecraft.getInstance().level.getBlockState(blockPos);
+                        if(!canMineFirstClick) {
+                            canMineFirstClick = DataUtils.tagMatchAny(itemStack, blockState);
+                        }
                     }
-                    //progressivelySummonRaycasts takes care of the raycast and rendering logic
-                } else {
-                    //Enable the charge
-                    //If the mainhanditem item is a tool...
-                    ItemStack itemStack = player.getMainHandItem();
-                    //Get weapon data here & init charge meter data
-                    Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
-                    double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
-                    maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
-                    currentChargeValue = 0;
-                    //...Flip the swing boolean
-                    ClientTasks.canRaftSwing = true;
                 }
-                //Release the key (Attack)
-            } else if (ClientTasks.canRaftSwing) {
+                if(!canMineFirstClick) {
+                    //If we are already charging
+                    if (canRaftSwing) {
+                        //Start Charging
+                        if (currentChargeValue < maxChargeThreshold) {
+                            currentChargeValue += 1;
+                        }
+                        //progressivelySummonRaycasts takes care of the raycast and rendering logic
+                    } else {
+                        //If we are not already charging. Enable the charge
+                        //If the mainhanditem item is a tool...
+                        ItemStack itemStack = player.getMainHandItem();
+                        //Get weapon data here & init charge meter data
+                        Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
+                        double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
+                        maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
+                        currentChargeValue = 0;
+                        //...Flip the swing boolean
+                        canRaftSwing = true;
+                    }
+                }
+
+                //Release the key when charging beforehand (Attack)
+            } else if (canRaftSwing) {
                 //Swing animation
                 player.swing(InteractionHand.MAIN_HAND);
                 //Attack packet (HurtPayload)
@@ -89,14 +119,19 @@ public class ClientTasks {
                 }
                 PacketDistributor.sendToServer(new HurtPayload(idArray));
                 //Reset charge data
-                ClientTasks.canRaftSwing = false;
+                canRaftSwing = false;
                 maxChargeThreshold = -1;
                 currentChargeValue = -1;
+                canMineFirstClick = false;
+            } else if (canMineFirstClick){
+                canMineFirstClick = false;
             }
         } else {
-            ClientTasks.canRaftSwing = false;
+            canRaftSwing = false;
             maxChargeThreshold = -1;
             currentChargeValue = -1;
+            canMineFirstClick = false;
+
         }
     }
 
