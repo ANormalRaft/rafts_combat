@@ -57,7 +57,7 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
-    //TODO list: Piercing rays 4 entities, Configs (Knockback charge threshold, How wide should range be (interactionRange ratio), Quad Alpha value, Should there be a list of exceptions with their own specifications for the width?), Server test
+    //TODO list: Configs (Knockback charge threshold, How wide should range be (interactionRange ratio), Quad Alpha value, Should there be a list of exceptions with their own specifications for the width?), Server test
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {

@@ -129,44 +129,59 @@ public class VectorUtils {
         return player.level().clip(clipContext);
     }
 
-    //Returns the EntityHitResult of a raycast
-    public static EntityHitResult getRaycastResult(Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player){
-        //Checks for block collisions first so that the raycasts don't go through walls
-        BlockHitResult blockHitResult = getRaycastResultBlock(eyePosition, endpoint, player);
-        Vec3 calculatedViewVector;
+    //Checks for block collisions to find the definite endpoint, then checks for an entity hit. If there is a hit, add it to the hurtlist, then call itself recursively with the hit location and the exempted entity
+    public static void summonAndProcessRaycasts(Vec3 startVector, Vec3 endpoint, double interactionRange, Entity player, ArrayList<EntityHitResult> hurtList, boolean isDefinitiveEndpoint, ArrayList<Integer> exemptionList){
         Vec3 finalLocation = new Vec3(endpoint.toVector3f());
-        if(blockHitResult.getType() != HitResult.Type.MISS) {
-            finalLocation = blockHitResult.getLocation();
+        //If this is the first raycast, checks for block collisions so that the raycasts don't go through walls by picking an appropriate new endpoint
+        if(!isDefinitiveEndpoint) {
+            BlockHitResult blockHitResult = getRaycastResultBlock(startVector, endpoint, player);
+            if (blockHitResult.getType() != HitResult.Type.MISS) {
+                finalLocation = blockHitResult.getLocation();
+            }
         }
-        calculatedViewVector = finalLocation.add(eyePosition.scale(-1));
-
-        //TODO LATE: Maybe a boolean to check if you are the endpoint vector vs offset to enable that one only for crits? (this would require changing the return type to a map or set with the entityHitResult and the crit boolean)
+        //Calculate missing variables for the raycast
+        Vec3 calculatedViewVector = finalLocation.add(startVector.scale(-1));
         AABB aabb = player.getBoundingBox().expandTowards(calculatedViewVector).inflate(1.0, 1.0, 1.0);
-        return ProjectileUtil.getEntityHitResult(player, eyePosition, finalLocation, aabb, (e) -> !e.isSpectator() && e.isPickable() && DataUtils.isNotPet(e, player), Mth.square(interactionRange));
+        //Perform/Summon raycast
+        EntityHitResult entityHitResult = ProjectileUtil.getEntityHitResult(player, startVector, finalLocation, aabb, (e) -> !e.isSpectator() && e.isPickable() && DataUtils.isNotPet(e, player) && !exemptionList.contains(e.getId()), Mth.square(interactionRange));
+        //If we have a hit
+        if(entityHitResult != null){
+            //Add to the hurtList
+            DataUtils.nonDuplicatesAddToList(hurtList, entityHitResult);
+            //Add to the exemptionList for recursive raycasts
+            exemptionList.add(entityHitResult.getEntity().getId());
+            //Get new start location
+            Vec3 newStartVector = entityHitResult.getLocation();
+            //Recursive call
+            summonAndProcessRaycasts(newStartVector, finalLocation, interactionRange, player, hurtList, true, exemptionList);
+        } else {
+            exemptionList.clear();
+        }
     }
 
-    //Same as renderOffsets, but summons raycasts instead and returns a List of EntityHitResults
+    //Same as renderOffsets, but summons raycasts instead
     public static void raycastOffsets(double chargeProgressPercentage, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player, ArrayList<EntityHitResult> arrayList){
         //Last Offset from endpoint
         //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
         Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
         Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
         int segmentAmount = 3;
+        ArrayList<Integer> exemptionList = new ArrayList<>();
 
         for(int i = 1; i < segmentAmount; i++){
             if((double) i/segmentAmount <= chargeProgressPercentage) {
                 Vec3 segment = differenceEndpointLastOffset.scale((double) i / segmentAmount);
                 Vec3 newOffset = endpoint.add(segment);
-                DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, newOffset, interactionRange, player));
+                summonAndProcessRaycasts(eyePosition, newOffset, interactionRange, player, arrayList, false, exemptionList);
                 //Mirrored
                 Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i / segmentAmount);
                 Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
-                DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, newOffsetMirrored, interactionRange, player));
+                summonAndProcessRaycasts(eyePosition, newOffsetMirrored, interactionRange, player, arrayList, false, exemptionList);
             }
         }
         if(chargeProgressPercentage == 1){
-            DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, lastOffsetVector, interactionRange, player));
-            DataUtils.nonDuplicatesAddToList(arrayList, getRaycastResult(eyePosition, lastOffsetVectorMirrored, interactionRange, player));
+            summonAndProcessRaycasts(eyePosition, lastOffsetVector, interactionRange, player, arrayList, false, exemptionList);
+            summonAndProcessRaycasts(eyePosition, lastOffsetVectorMirrored, interactionRange, player, arrayList, false, exemptionList);
         }
     }
 

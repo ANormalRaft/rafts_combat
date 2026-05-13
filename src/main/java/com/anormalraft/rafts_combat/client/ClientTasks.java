@@ -167,8 +167,12 @@ public class ClientTasks {
 
                 //Player raycast (endpoint) position
                 Vec3 endpoint = eyePosition.add(scaledViewVector);
+                //Clear list
+                entityHitResultList.clear();
+                //Required for summonAndProcessRaycasts
+                ArrayList<Integer> exemptionList = new ArrayList<>();
                 //Raycast
-                EntityHitResult endpointRaycastResult = VectorUtils.getRaycastResult(eyePosition, endpoint, interactionRange, player);
+                VectorUtils.summonAndProcessRaycasts(eyePosition, endpoint, interactionRange, player, entityHitResultList, false, exemptionList);
 
                 //Offset vectors
                 //offsetXZ needs to be negative with my setup due to quad rendering shenanigans probably
@@ -179,11 +183,9 @@ public class ClientTasks {
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
 
-                //Clear list
-                entityHitResultList.clear();
+
                 //Summons all remaining offsets & get their results
                 VectorUtils.raycastOffsets(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, interactionRange, player, entityHitResultList);
-                DataUtils.nonDuplicatesAddToList(entityHitResultList, endpointRaycastResult);
                 //Remove all nulls
                 entityHitResultList.removeIf(Objects::isNull);
 
