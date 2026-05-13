@@ -14,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(MultiPlayerGameMode.class)
 public class CancelStartDestroyMultiPlayerGameModeMixin {
 
-    //TODO: Will need a raycast for tools in ClientTasks. canRaftSwing is temporary
     @Inject(method = "startDestroyBlock", at=@At("HEAD"), cancellable = true)
     public void cancelStartDestroy(BlockPos loc, Direction face, CallbackInfoReturnable<Boolean> cir){
         if(DataUtils.isHoldingCorrectItem(Minecraft.getInstance().player)){

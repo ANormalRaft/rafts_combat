@@ -57,7 +57,7 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
-    //TODO list: knockback, the mace, crits, Configs (how wide should default be, should there be a list of exceptions with their own specifications for the width?, Quad Alpha value), Server test
+    //TODO list: the mace, crits, Configs (how wide should default be, should there be a list of exceptions with their own specifications for the width?, Quad Alpha value), Server test
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {

@@ -3,18 +3,26 @@ package com.anormalraft.rafts_combat.mixin;
 import com.anormalraft.rafts_combat.Rafts_Combat;
 import com.anormalraft.rafts_combat.util.DataUtils;
 import com.llamalad7.mixinextras.sugar.Local;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.common.extensions.IPlayerExtension;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 @Mixin(Player.class)
-public class AttackCalcPlayerMixin {
+public abstract class AttackCalcPlayerMixin extends LivingEntity {
+
+    protected AttackCalcPlayerMixin(EntityType<? extends LivingEntity> entityType, Level level) {
+        super(entityType, level);
+    }
 
     //Scales the value for the damage calculation
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 1), name="f")
     public float applyScaling(float value, @Local (ordinal = 0) float f){
-        if(DataUtils.isHoldingCorrectItem((Player) (Object) this)){
+        if(DataUtils.isHoldingCorrectItem(this)){
             return f * DataUtils.calculateScaling(Rafts_Combat.serverChargeProgressPercentage);
         }
         return value;
@@ -22,17 +30,17 @@ public class AttackCalcPlayerMixin {
 
     //Negate the sweeping logic
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 2), name="flag2")
-    public boolean negateKnockback(boolean value){
-        if(DataUtils.isHoldingCorrectItem((Player) (Object) this)) {
+    public boolean negateSweeping(boolean value){
+        if(DataUtils.isHoldingCorrectItem(this)) {
             return false;
         }
         return value;
     }
 
-    //Negate knockback logic if charge is less than 60% (not here)
+    //Negate sprint knockback logic if charge is less than 60% (not here). The true knockback removal is in KnockbackNegateLivingEntityMixin
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 0), name="f4")
-    public float negateKnockback(float value){
-        if(DataUtils.isHoldingCorrectItem((Player) (Object) this) && Rafts_Combat.serverChargeProgressPercentage < 0.6) {
+    public float kindaNegateKnockback(float value){
+        if(DataUtils.isHoldingCorrectItem(this) && Rafts_Combat.serverChargeProgressPercentage < 0.6) {
             return 0F;
         }
         return value;
@@ -41,7 +49,7 @@ public class AttackCalcPlayerMixin {
     //Used, but not for damage it seems
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 0), name="f2")
     public float setScalingValue(float value){
-        if(DataUtils.isHoldingCorrectItem((Player) (Object) this)) {
+        if(DataUtils.isHoldingCorrectItem(this)) {
             return (float) Rafts_Combat.serverChargeProgressPercentage;
         }
         return value;

@@ -36,7 +36,7 @@ public class DataUtils {
     }
 
     //Conditional in method form to see if the player is holding an itemstack and if that itemstack is a tool
-    public static boolean isHoldingCorrectItem(Player player) {
+    public static boolean isHoldingCorrectItem(LivingEntity player) {
         if (player != null) {
             ItemStack itemStack = player.getMainHandItem();
             if (!itemStack.isEmpty()) {
