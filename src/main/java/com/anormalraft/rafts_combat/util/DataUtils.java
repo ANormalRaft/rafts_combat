@@ -1,6 +1,5 @@
 package com.anormalraft.rafts_combat.util;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -72,6 +71,23 @@ public class DataUtils {
     public static boolean tagMatchAny(ItemStack itemStack, BlockState blockState){
         for (Map.Entry<TagKey<Item>,TagKey<Block>> entry : itemTagsBlockTagsHashMap.entrySet()){
             if(itemStack.is(entry.getKey()) && blockState.is(entry.getValue())){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    //Checks for item tags for disallowed right-clickable items
+    public static boolean tagNoRightClick(ItemStack itemStack){
+        ArrayList<TagKey<Item>> list = new ArrayList<>();
+        list.add(Tags.Items.FOODS);
+        list.add(Tags.Items.POTIONS);
+        list.add(Tags.Items.TOOLS_BOW);
+        list.add(Tags.Items.TOOLS_CROSSBOW);
+        list.add(Tags.Items.TOOLS_SPEAR);
+
+        for(TagKey<Item> tagKey: list){
+            if(itemStack.is(tagKey)){
                 return true;
             }
         }

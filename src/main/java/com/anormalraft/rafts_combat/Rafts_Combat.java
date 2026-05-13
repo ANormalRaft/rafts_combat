@@ -57,7 +57,7 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
-    //TODO list: the mace?, crits, Configs (how wide should default be, should there be a list of exceptions with their own specifications for the width?), Server test
+    //TODO list: knockback, the mace, crits, Configs (how wide should default be, should there be a list of exceptions with their own specifications for the width?, Quad Alpha value), Server test
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
@@ -71,10 +71,10 @@ public class Rafts_Combat {
         ClientTasks.handleAttack();
     }
 
-    //Cancel right click item interactions when an attack is queued
+    //Cancel specific right click item interactions when an attack is queued. Should be put in the use() method probably instead but ehh
     @SubscribeEvent
     public void onPlayerInteractRightClick(PlayerInteractEvent.RightClickItem event){
-        if(ClientTasks.canRaftSwing){
+        if(ClientTasks.canRaftSwing && DataUtils.tagNoRightClick(event.getItemStack())){
             event.setCanceled(true);
         }
     }

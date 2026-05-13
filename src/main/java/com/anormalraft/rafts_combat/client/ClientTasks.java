@@ -29,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.opengl.GL11;
 
@@ -57,12 +58,10 @@ public class ClientTasks {
     //Key input logic
     public static void handleAttack() {
         LocalPlayer player = Minecraft.getInstance().player;
+        if(player == null) {
+            return;
+        }
         if(DataUtils.isHoldingCorrectItem(player)) {
-            //Disables the functionality if an item is being used
-            if(player.isUsingItem()){
-                return;
-            }
-            //Mod functionality
             //Holding down the key
             if (Minecraft.getInstance().options.keyAttack.isDown()) {
                 //Lets tools mine their respective blocks if one is targeted with the starting click and we are not charging
@@ -104,24 +103,33 @@ public class ClientTasks {
                         canRaftSwing = true;
                     }
                 }
-
-                //Release the key when charging beforehand (Attack)
+                //Release the key when charging beforehand
             } else if (canRaftSwing) {
-                //Swing animation
-                player.swing(InteractionHand.MAIN_HAND);
-                //Attack packet (HurtPayload)
-                //Extract the mob ids from entityHitResultList into an ArrayList of Integers to then send to the server. C2SHurtPayloadHandler applies the damage
-                ArrayList<Integer> idArray = new ArrayList<>();
-                for (EntityHitResult entityHitResult : entityHitResultList) {
-                    idArray.add(entityHitResult.getEntity().getId());
+                ItemStack offhandItem = player.getOffhandItem();
+                //Releasing the key but currently using a shield -> continue charging
+                if (offhandItem.is(Tags.Items.TOOLS_SHIELD) && player.isUsingItem()) {
+                    if (currentChargeValue < maxChargeThreshold) {
+                        currentChargeValue += 1;
+                    }
                 }
-                PacketDistributor.sendToServer(new HurtPayload(idArray, chargeProgressPercentage));
-                //Reset charge data
-                canRaftSwing = false;
-                maxChargeThreshold = -1;
-                currentChargeValue = -1;
-                chargeProgressPercentage = 0;
-                canMineFirstClick = false;
+                    //Else -> Attack
+                 else {
+                    //Swing animation
+                    player.swing(InteractionHand.MAIN_HAND);
+                    //Attack packet (HurtPayload)
+                    //Extract the mob ids from entityHitResultList into an ArrayList of Integers to then send to the server. C2SHurtPayloadHandler applies the damage
+                    ArrayList<Integer> idArray = new ArrayList<>();
+                    for (EntityHitResult entityHitResult : entityHitResultList) {
+                        idArray.add(entityHitResult.getEntity().getId());
+                    }
+                    PacketDistributor.sendToServer(new HurtPayload(idArray, chargeProgressPercentage));
+                    //Reset charge data
+                    canRaftSwing = false;
+                    maxChargeThreshold = -1;
+                    currentChargeValue = -1;
+                    chargeProgressPercentage = 0;
+                    canMineFirstClick = false;
+                }
             } else if (canMineFirstClick){
                 canMineFirstClick = false;
             }

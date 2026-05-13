@@ -30,8 +30,8 @@ public class C2SHurtPayloadHandler {
             for (Integer id : data.idList()) {
                 Entity entity = player.level().getEntity(id);
                 if(entity != null) {
-                    //TODO LATE: Knockback modification as well, probably in DataUtils
-//
+                    //TODO: Knockback modification as well, probably in DataUtils
+                    //TODO: Sweeping turned off
                     player.attack(entity);
 
                     //Unused but kept for reference
