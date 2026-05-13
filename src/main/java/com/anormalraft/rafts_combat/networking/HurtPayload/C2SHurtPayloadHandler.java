@@ -24,22 +24,17 @@ public class C2SHurtPayloadHandler {
             Player player = context.player();
             //Set value on serverside
             Rafts_Combat.serverChargeProgressPercentage = data.chargeProgressPercentage();
-            //Mace test
-            Rafts_Combat.canMaceAttack = true;
+            //Set crit possibility to true; If one is found in AttackCalcPlayerMixin, then it will be flipped and further crits will be denied
+            Rafts_Combat.canCrit = true;
             //Thank you XFactHD for this idea
             for (Integer id : data.idList()) {
                 Entity entity = player.level().getEntity(id);
                 if(entity != null) {
-                    //TODO: Knockback modification as well, probably in DataUtils
-                    //TODO: Sweeping turned off
                     player.attack(entity);
-
                     //Unused but kept for reference
                     //entity.hurt(context.player().damageSources().playerAttack(context.player()), 4);
-                    //TODO: If we find a mace attack, flip the boolean after the attack
                 }
             }
-            Rafts_Combat.canMaceAttack = false;
         }).exceptionally(e -> {
             context.disconnect(Component.literal(e.getMessage()));
             return null;

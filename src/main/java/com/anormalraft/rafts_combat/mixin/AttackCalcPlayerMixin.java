@@ -37,6 +37,21 @@ public abstract class AttackCalcPlayerMixin extends LivingEntity {
         return value;
     }
 
+    //Deny crits if one target already received it
+    @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 0), name="flag1")
+    public boolean denyFurtherCrits(boolean value){
+        if(value){
+            if(DataUtils.isHoldingCorrectItem(this)) {
+                if(Rafts_Combat.canCrit){
+                    Rafts_Combat.canCrit = false;
+                    return true;
+                }
+                return false;
+            }
+        }
+        return value;
+    }
+
     //Negate sprint knockback logic if charge is less than 60% (not here). The true knockback removal is in KnockbackNegateLivingEntityMixin
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 0), name="f4")
     public float kindaNegateKnockback(float value){
@@ -46,7 +61,7 @@ public abstract class AttackCalcPlayerMixin extends LivingEntity {
         return value;
     }
 
-    //Used, but not for damage it seems
+    //Used, but not for damage, for other flags such as enabling crits?
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 0), name="f2")
     public float setScalingValue(float value){
         if(DataUtils.isHoldingCorrectItem(this)) {

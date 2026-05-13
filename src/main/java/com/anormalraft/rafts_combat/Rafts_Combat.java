@@ -32,7 +32,7 @@ public class Rafts_Combat {
     //Serverside charge progress percentage
     public static double serverChargeProgressPercentage = -1;
     //Mace test
-    public static boolean canMaceAttack = false;
+    public static boolean canCrit = false;
 
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
@@ -57,7 +57,7 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
-    //TODO list: the mace, crits, Configs (how wide should default be, should there be a list of exceptions with their own specifications for the width?, Quad Alpha value), Server test
+    //TODO list: Piercing rays 4 entities, Configs (Knockback charge threshold, How wide should range be (interactionRange ratio), Quad Alpha value, Should there be a list of exceptions with their own specifications for the width?), Server test
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
