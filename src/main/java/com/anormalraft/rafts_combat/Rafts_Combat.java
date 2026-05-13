@@ -29,6 +29,10 @@ public class Rafts_Combat {
     public static final String MODID = "rafts_combat";
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
+    //Serverside charge progress percentage
+    public static double serverChargeProgressPercentage = -1;
+    //Mace test
+    public static boolean canMaceAttack = false;
 
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
@@ -51,11 +55,9 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SHOVELS, BlockTags.MINEABLE_WITH_SHOVEL);
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.HOES, BlockTags.MINEABLE_WITH_HOE);
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
-        //Sets view bobbing off or else the rendering gets really wonky. This is the botched solution cause reversing viewbobbing has proved ineffective. Turning viewbobbing on and off is worse since it moves the camera vertically too much
-//        Minecraft.getInstance().options.bobView().set(false);
     }
 
-    //TODO list: charge speed, Damage calculation, crits, Configs, Server test
+    //TODO list: the mace?, crits, Configs (how wide should default be, should there be a list of exceptions with their own specifications for the width?), Server test
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {

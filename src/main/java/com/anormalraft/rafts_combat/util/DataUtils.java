@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.EntityHitResult;
+import net.neoforged.neoforge.common.Tags;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,7 +41,7 @@ public class DataUtils {
         if (player != null) {
             ItemStack itemStack = player.getMainHandItem();
             if (!itemStack.isEmpty()) {
-                return itemStack.getComponents().has(DataComponents.TOOL);
+                return itemStack.is(Tags.Items.MELEE_WEAPON_TOOLS);
             }
         }
         return false;
@@ -77,5 +78,8 @@ public class DataUtils {
         return false;
     }
 
-    //TODO: Damage calc
+    //Damage scaling calculation similar to exponential
+    public static float calculateScaling(double chargeProgressPercent){
+        return (float) (Math.pow(10,chargeProgressPercent) - 1) /(10-1);
+    }
 }

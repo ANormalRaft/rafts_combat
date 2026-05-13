@@ -45,9 +45,10 @@ public class ClientTasks {
     public static RenderType chargeMeterRenderType = RenderType.create("charge_meter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1536, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
     //Detects click behavior
     public static boolean canRaftSwing = false;
-    //Item data
+    //Item data (no need to add a modifier since these values can and should be modified through KubeJS)
     public static int maxChargeThreshold = -1;
     public static int currentChargeValue = -1;
+    public static double chargeProgressPercentage = 0;
     //List of hit targets
     public static ArrayList<EntityHitResult> entityHitResultList = new ArrayList<>();
     //Mining lock for first click. The block retaining its destruction status after a re-hover whilst keeping holding down the attack key is actually vanilla behavior lol
@@ -114,11 +115,12 @@ public class ClientTasks {
                 for (EntityHitResult entityHitResult : entityHitResultList) {
                     idArray.add(entityHitResult.getEntity().getId());
                 }
-                PacketDistributor.sendToServer(new HurtPayload(idArray));
+                PacketDistributor.sendToServer(new HurtPayload(idArray, chargeProgressPercentage));
                 //Reset charge data
                 canRaftSwing = false;
                 maxChargeThreshold = -1;
                 currentChargeValue = -1;
+                chargeProgressPercentage = 0;
                 canMineFirstClick = false;
             } else if (canMineFirstClick){
                 canMineFirstClick = false;
@@ -127,8 +129,8 @@ public class ClientTasks {
             canRaftSwing = false;
             maxChargeThreshold = -1;
             currentChargeValue = -1;
+            chargeProgressPercentage = 0;
             canMineFirstClick = false;
-
         }
     }
 
@@ -140,7 +142,7 @@ public class ClientTasks {
                 if(maxChargeThreshold < 0 || currentChargeValue < 0){
                     return;
                 }
-                double chargeProgressPercentage = (double) currentChargeValue /maxChargeThreshold;
+                chargeProgressPercentage = (double) currentChargeValue /maxChargeThreshold;
                 float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
                 double interactionRange = player.entityInteractionRange();
                 Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();

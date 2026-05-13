@@ -13,12 +13,13 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.List;
 
-public record HurtPayload(List<Integer> idList) implements CustomPacketPayload {
+public record HurtPayload(List<Integer> idList, double chargeProgressPercentage) implements CustomPacketPayload {
 
     public static final Type<HurtPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("rafts_combat", "hurtpayload"));
 
     public static final StreamCodec<ByteBuf, HurtPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.INT.apply(ByteBufCodecs.list()), HurtPayload::idList,
+            ByteBufCodecs.DOUBLE, HurtPayload::chargeProgressPercentage,
             HurtPayload::new
     );
 
