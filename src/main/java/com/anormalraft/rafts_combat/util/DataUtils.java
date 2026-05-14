@@ -40,7 +40,7 @@ public class DataUtils {
         if (entity != null) {
             ItemStack itemStack = entity.getMainHandItem();
             if (!itemStack.isEmpty()) {
-                return itemStack.is(Tags.Items.TOOLS);
+                return itemStack.is(Tags.Items.MELEE_WEAPON_TOOLS);
             }
         }
         return false;

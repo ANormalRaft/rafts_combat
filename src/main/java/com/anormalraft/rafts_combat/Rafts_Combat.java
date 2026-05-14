@@ -112,16 +112,14 @@ public class Rafts_Combat {
             PacketDistributor.sendToPlayer(serverPlayer, new MatchingTagsPayload(k, v));
         });
     }
-
-    //TODO list: Config cooldown time, Decouple shield stuff from Toolforme to make its own mod and put the correct ordinal in LivingEntityMixin there
-
+    //Perform Rendering
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         ClientTasks.progressivelySummonRaycasts(event);
 //        RenderDebug.debugRender(event);
     }
 
-    // Event is on the NeoForge event bus only on the physical client
+    //Event is on the NeoForge event bus only on the physical client. Perform input management logic
     @SubscribeEvent
     public void onClientTick(ClientTickEvent.Post event) {
         ClientTasks.handleAttack();
