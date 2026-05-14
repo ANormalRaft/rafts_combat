@@ -1,5 +1,7 @@
 package com.anormalraft.rafts_combat.client;
 
+import com.anormalraft.rafts_combat.config.ClientConfig;
+import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.anormalraft.rafts_combat.networking.HurtPayload.HurtPayload;
 import com.anormalraft.rafts_combat.util.DataUtils;
 import com.anormalraft.rafts_combat.util.VectorUtils;
@@ -36,7 +38,6 @@ import org.lwjgl.opengl.GL11;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-import static com.anormalraft.rafts_combat.Rafts_Combat.LOGGER;
 import static net.minecraft.client.renderer.RenderStateShard.*;
 
 @Mod(value = "rafts_combat", dist = Dist.CLIENT)
@@ -61,6 +62,13 @@ public class ClientTasks {
         if(player == null) {
             return;
         }
+        //If we already are using a prohibited item, do not start a charge
+        if(player.isUsingItem()){
+            if(DataUtils.tagNoRightClick(player.getUseItem())){
+                return;
+            }
+        }
+        //If we are holding an item intended to be used with the attack charge mechanic, proceed with the logic
         if(DataUtils.isHoldingCorrectItem(player)) {
             //Holding down the key
             if (Minecraft.getInstance().options.keyAttack.isDown()) {
@@ -222,7 +230,7 @@ public class ClientTasks {
         //Calculate the "always left" vector
         Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI, 0, viewVector).normalize();
         //The scale must be a ratio from the interaction range to keep its "zoom"
-        double quadHeight = interactionRange * 7/1000;
+        double quadHeight = interactionRange * ClientConfig.QUAD_HEIGHT.get();
         Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(quadHeight);
 
         //Calculate reveal position
@@ -231,7 +239,7 @@ public class ClientTasks {
         Vec3 voidedChargeAccurateOffsetVectorMirrored = endpoint.vectorTo(lastOffsetVectorMirrored).scale(chargeProgressPercentage);
         Vec3 chargeAccurateOffsetVectorMirrored = endpoint.add(voidedChargeAccurateOffsetVectorMirrored);
         //Calculate alpha value
-        int maxAlpha = 100;
+        int maxAlpha = ClientConfig.MAX_ALPHA.get();
         int minAlpha = 0;
         int currentAlpha = Mth.floor((maxAlpha * chargeProgressPercentage) + minAlpha);
         //Turn it red when it detects at least 1 target

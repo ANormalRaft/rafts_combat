@@ -1,10 +1,10 @@
 package com.anormalraft.rafts_combat;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
+import com.anormalraft.rafts_combat.config.ClientConfig;
+import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
-import com.anormalraft.rafts_combat.util.RenderDebug;
-import net.minecraft.client.Minecraft;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -43,8 +43,9 @@ public class Rafts_Combat {
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
 
-        // Register our mod's ModConfigSpec so that FML can create and load the config file for us
-        modContainer.registerConfig(ModConfig.Type.SERVER, Config.SPEC);
+        // Register our mod's configs
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
     }
 
     //Sync config if needed in future and also init the hashmap in DataUtils
@@ -57,7 +58,7 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
-    //TODO list: Configs (Knockback charge threshold, How wide should range be (interactionRange ratio), Quad Alpha value, Should there be a list of exceptions with their own specifications for the width?), Server test
+    //TODO list: Configs (How wide should default range be (interactionRange ratio), Should there be a list of exceptions with their own specifications for the width ala Toolforme?), Server test
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
@@ -71,7 +72,7 @@ public class Rafts_Combat {
         ClientTasks.handleAttack();
     }
 
-    //Cancel specific right click item interactions when an attack is queued. Should be put in the use() method probably instead but ehh
+    //Cancel specific item interactions when a charge is undergoing (this isn't bound to the right click button specifically)
     @SubscribeEvent
     public void onPlayerInteractRightClick(PlayerInteractEvent.RightClickItem event){
         if(ClientTasks.canRaftSwing && DataUtils.tagNoRightClick(event.getItemStack())){

@@ -1,5 +1,6 @@
 package com.anormalraft.rafts_combat.mixin;
 
+import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.anormalraft.rafts_combat.Rafts_Combat;
 import com.anormalraft.rafts_combat.util.DataUtils;
 import com.llamalad7.mixinextras.sugar.Local;
@@ -7,7 +8,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.common.extensions.IPlayerExtension;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -55,7 +55,7 @@ public abstract class AttackCalcPlayerMixin extends LivingEntity {
     //Negate sprint knockback logic if charge is less than 60% (not here). The true knockback removal is in KnockbackNegateLivingEntityMixin
     @ModifyVariable(method = "attack", at=@At(value = "STORE", ordinal = 0), name="f4")
     public float kindaNegateKnockback(float value){
-        if(DataUtils.isHoldingCorrectItem(this) && Rafts_Combat.serverChargeProgressPercentage < 0.6) {
+        if(DataUtils.isHoldingCorrectItem(this) && Rafts_Combat.serverChargeProgressPercentage < ServerConfig.KNOCKBACK_THRESHOLD.get()) {
             return 0F;
         }
         return value;
