@@ -3,14 +3,23 @@ package com.anormalraft.rafts_combat;
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.config.ClientConfig;
 import com.anormalraft.rafts_combat.config.ServerConfig;
+import com.anormalraft.rafts_combat.networking.CustomWidthArrayPayload.CustomWidthArrayPayload;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -20,6 +29,9 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.neoforge.common.NeoForge;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.regex.Pattern;
 
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
@@ -48,9 +60,42 @@ public class Rafts_Combat {
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
     }
 
-    //Sync config if needed in future and also init the hashmap in DataUtils
+    //Sync custom ratios from config and also init the hashmap in DataUtils
     @SubscribeEvent
     public void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        //Sync custom ratios (code from Toolforme)
+        HashMap<Double, Item[]> bindingsHashMap = HashMap.newHashMap(3);
+        //Gson-ify bindings
+        JsonObject bindings = new Gson().fromJson(ServerConfig.CUSTOM_RATIOS.get(), JsonObject.class);
+        for(var entry : bindings.asMap().entrySet()){
+            //You cannot do like in KubeJS where you can use "matches()". You have to do all these steps due to Java devs
+            String output = entry.getValue().toString();
+            //I don't know why the Value appears with the "", but not the key. Maybe somewhere in the conversions, the key lost them?
+            String stringValue = output.substring(1, output.length()-1);
+            //Array value
+            if(stringValue.charAt(0) == '['){
+                String stringWishlist = stringValue.substring(1, stringValue.length() -1);
+                String[] stringArray = stringWishlist.split(", ");
+                Item[] allMatchesArray = BuiltInRegistries.ITEM.stream().filter((item) -> Arrays.asList(stringArray).contains(item.toString())).toArray(Item[]::new);
+                bindingsHashMap.put(Double.valueOf(entry.getKey()), allMatchesArray);
+                //Regex value
+            } else {
+                Pattern pattern = Pattern.compile(stringValue);
+                Item[] allMatchesArray = BuiltInRegistries.ITEM.stream().filter((item) -> pattern.matcher(item.toString()).find()).toArray(Item[]::new);
+                bindingsHashMap.put(Double.valueOf(entry.getKey()), allMatchesArray);
+            }
+        }
+        Player player = event.getEntity();
+        ServerPlayer serverPlayer = player.getServer().getPlayerList().getPlayer(player.getUUID());
+        bindingsHashMap.forEach((k,v) -> {
+            ItemStack[] itemStackArray = new ItemStack[v.length];
+            for(int i=0; i < itemStackArray.length; i++){
+                itemStackArray[i] = v[i].getDefaultInstance();
+            }
+            PacketDistributor.sendToPlayer(serverPlayer, new CustomWidthArrayPayload(k, Arrays.asList(itemStackArray)));
+        });
+
+        //DataUtils hashmap init
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.AXES, BlockTags.MINEABLE_WITH_AXE);
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.PICKAXES, BlockTags.MINEABLE_WITH_PICKAXE);
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SHOVELS, BlockTags.MINEABLE_WITH_SHOVEL);
@@ -58,7 +103,7 @@ public class Rafts_Combat {
         DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
     }
 
-    //TODO list: Configs (How wide should default range be (interactionRange ratio), Should there be a list of exceptions with their own specifications for the width ala Toolforme?), Server test
+    //TODO list: Server test, Decouple shield stuff from Toolforme to make its own mod and put the correct ordinal in LivingEntityMixin there
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {

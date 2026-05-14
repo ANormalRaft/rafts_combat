@@ -1,6 +1,8 @@
 package com.anormalraft.rafts_combat.networking;
 
 import com.anormalraft.rafts_combat.networking.ClearListPayload.ClearListPayload;
+import com.anormalraft.rafts_combat.networking.CustomWidthArrayPayload.CustomWidthArrayPayload;
+import com.anormalraft.rafts_combat.networking.CustomWidthArrayPayload.S2CCustomWidthArrayPayloadHandler;
 import com.anormalraft.rafts_combat.networking.HurtPayload.C2SHurtPayloadHandler;
 import com.anormalraft.rafts_combat.networking.HurtPayload.HurtPayload;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
@@ -13,5 +15,6 @@ public class PayloadHousekeeping {
         final PayloadRegistrar registrar = event.registrar("1");
         registrar.playToServer(HurtPayload.TYPE, HurtPayload.STREAM_CODEC, C2SHurtPayloadHandler::handleDataOnMain);
         registrar.playToServer(ClearListPayload.TYPE, ClearListPayload.STREAM_CODEC, ClearListPayload::handleDataOnMain);
+        registrar.playToClient(CustomWidthArrayPayload.TYPE, CustomWidthArrayPayload.STREAM_CODEC, S2CCustomWidthArrayPayloadHandler::handleDataOnMain);
     }
 }

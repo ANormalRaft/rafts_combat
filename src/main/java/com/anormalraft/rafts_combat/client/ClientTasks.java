@@ -21,6 +21,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.block.state.BlockState;
@@ -55,6 +56,8 @@ public class ClientTasks {
     public static ArrayList<EntityHitResult> entityHitResultList = new ArrayList<>();
     //Mining lock for first click. The block retaining its destruction status after a re-hover whilst keeping holding down the attack key is actually vanilla behavior lol
     public static boolean canMineFirstClick = false;
+    //HashMap representing the config values from the server
+    public static HashMap<Double, Item[]> customWidthHashMap = new HashMap<>(2);
 
     //Key input logic
     public static void handleAttack() {
@@ -185,7 +188,12 @@ public class ClientTasks {
                 //Offset vectors
                 //offsetXZ needs to be negative with my setup due to quad rendering shenanigans probably
                 //Has to be scaled with a ratio from the interactionRange
-                double turnRatio = 2.0/5.0;
+                double turnRatio = ServerConfig.WIDTH_RATIO.get();
+                for(Map.Entry<Double, Item[]> entry: customWidthHashMap.entrySet()){
+                    if(Arrays.asList(entry.getValue()).contains(player.getMainHandItem().getItem())){
+                        turnRatio = entry.getKey();
+                    }
+                }
                 double offsetXZ = -(interactionRange * turnRatio);
                 double offsetY = 0.0;
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
