@@ -35,12 +35,12 @@ public class DataUtils {
         }
     }
 
-    //Conditional in method form to see if the player is holding an itemstack and if that itemstack is a tool
-    public static boolean isHoldingCorrectItem(LivingEntity player) {
-        if (player != null) {
-            ItemStack itemStack = player.getMainHandItem();
+    //Conditional in method form to see if the entity is holding an itemstack and if that itemstack is a tool. Keep in mind that mod authors often don't include these or misspell them...
+    public static boolean isHoldingCorrectItem(LivingEntity entity) {
+        if (entity != null) {
+            ItemStack itemStack = entity.getMainHandItem();
             if (!itemStack.isEmpty()) {
-                return itemStack.is(Tags.Items.MELEE_WEAPON_TOOLS);
+                return itemStack.is(Tags.Items.TOOLS);
             }
         }
         return false;

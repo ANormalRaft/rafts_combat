@@ -20,6 +20,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -43,7 +44,6 @@ import static net.minecraft.client.renderer.RenderStateShard.*;
 
 @Mod(value = "rafts_combat", dist = Dist.CLIENT)
 public class ClientTasks {
-
     //To render my quad correctly (no depth test)
     public static RenderType chargeMeterRenderType = RenderType.create("charge_meter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1536, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
     //Detects click behavior
@@ -77,13 +77,13 @@ public class ClientTasks {
             if (Minecraft.getInstance().options.keyAttack.isDown()) {
                 //Lets tools mine their respective blocks if one is targeted with the starting click and we are not charging
                 if(!canRaftSwing){
-                    double interactionRange = player.entityInteractionRange();
+                    double blockInteractionRange = player.blockInteractionRange();
                     Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
                     Vec3 mainCameraPosition = mainCamera.getPosition();
                     Vec3 eyePosition = new Vec3(mainCameraPosition.x, mainCameraPosition.y, mainCameraPosition.z);
                     Vec3 viewVector = player.getViewVector(1);
-                    Vec3 scaledViewVector = viewVector.scale(interactionRange);
-                    BlockHitResult blockHitResult = VectorUtils.getRaycastResultBlock(eyePosition, eyePosition.add(scaledViewVector), player);
+                    Vec3 scaledBlockViewVector = viewVector.scale(blockInteractionRange);
+                    BlockHitResult blockHitResult = VectorUtils.getRaycastResultBlock(eyePosition, eyePosition.add(scaledBlockViewVector), player);
                     if(blockHitResult.getType() != HitResult.Type.MISS){
                         ItemStack itemStack = player.getMainHandItem();
                         BlockPos blockPos = blockHitResult.getBlockPos();
@@ -205,8 +205,10 @@ public class ClientTasks {
                 //Remove all nulls
                 entityHitResultList.removeIf(Objects::isNull);
 
-                //Rendering
-                renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange, player, partialTick);
+                //Rendering, only in first person
+                if(Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
+                    renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange, player, partialTick);
+                }
             }
         }
     }

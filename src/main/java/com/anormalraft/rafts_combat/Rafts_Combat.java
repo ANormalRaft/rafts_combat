@@ -4,14 +4,20 @@ import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.config.ClientConfig;
 import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.anormalraft.rafts_combat.networking.CustomWidthArrayPayload.CustomWidthArrayPayload;
+import com.anormalraft.rafts_combat.networking.MatchingTagsPayload.MatchingTagsPayload;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -95,15 +101,19 @@ public class Rafts_Combat {
             PacketDistributor.sendToPlayer(serverPlayer, new CustomWidthArrayPayload(k, Arrays.asList(itemStackArray)));
         });
 
-        //DataUtils hashmap init
-        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.AXES, BlockTags.MINEABLE_WITH_AXE);
-        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.PICKAXES, BlockTags.MINEABLE_WITH_PICKAXE);
-        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SHOVELS, BlockTags.MINEABLE_WITH_SHOVEL);
-        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.HOES, BlockTags.MINEABLE_WITH_HOE);
-        DataUtils.itemTagsBlockTagsHashMap.put(ItemTags.SWORDS, BlockTags.SWORD_EFFICIENT);
+        //DataUtils hashmap init sent to client. Perhaps could be a future config option, but for now no
+        HashMap<String, String> tagsMap = new HashMap<>(5);
+        tagsMap.put("minecraft:axes", "minecraft:mineable/axe");
+        tagsMap.put("minecraft:pickaxes","minecraft:mineable/pickaxe");
+        tagsMap.put("minecraft:hoes","minecraft:mineable/hoe");
+        tagsMap.put("minecraft:shovels","minecraft:mineable/shovel");
+        tagsMap.put("minecraft:swords","minecraft:sword_efficient");
+        tagsMap.forEach((k,v) -> {
+            PacketDistributor.sendToPlayer(serverPlayer, new MatchingTagsPayload(k, v));
+        });
     }
 
-    //TODO list: Server test, Decouple shield stuff from Toolforme to make its own mod and put the correct ordinal in LivingEntityMixin there
+    //TODO list: Config cooldown time, Decouple shield stuff from Toolforme to make its own mod and put the correct ordinal in LivingEntityMixin there
 
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
@@ -122,6 +132,8 @@ public class Rafts_Combat {
     public void onPlayerInteractRightClick(PlayerInteractEvent.RightClickItem event){
         if(ClientTasks.canRaftSwing && DataUtils.tagNoRightClick(event.getItemStack())){
             event.setCanceled(true);
+            //Thank you Random from Neoforge discord
+            event.setCancellationResult(InteractionResult.FAIL);
         }
     }
 }
