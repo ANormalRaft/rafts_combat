@@ -1,0 +1,36 @@
+name: Bug Report
+description: File a bug report
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Was a minimal setup tested?
+      description: |
+        A minimal setup is a separate modpack in which there are very little (~10) mods for testing purposes. One makes sure that no other potentially conflicting mod is present in order to make sure the problem comes from this mod
+      options:
+        - label: Yes, I am cool
+        - label: Nop
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Versions
+      description: Mod version + Mod platform version + (if any) conflicting mod version
+      placeholder: |
+        Tool Forme 0.1.0
+        NeoForge 21.1.203
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Describe what happened in order for the bug to occur. Step-by-step is encouraged
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What should happen?
+      description: Describe what would be the expected sequence of events
+    validations:
+      required: true

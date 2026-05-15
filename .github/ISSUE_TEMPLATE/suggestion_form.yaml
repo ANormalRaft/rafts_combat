@@ -1,0 +1,18 @@
+name: Suggestion
+description: Describe thy wishes (but no promises)
+title: "[SUGGESTION]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: The Suggestion in Question
+      description: Describe in detail what you'd want the mod to do which it already doesn't do
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: The Imaginary Law of Equivalent Exchange
+      description: Describe what you would give up in order to have the suggestion become reality in non-monetary terms
+      placeholder: "Ex: An eighth of my soul, the head of my largest Optimus Prime figurine, the finely aged lint I found in my pocket"
+    validations:
+      required: true
