@@ -125,6 +125,7 @@ public class VectorUtils {
 
     //Raycasts for block collision detection
     public static BlockHitResult getRaycastResultBlock(Vec3 eyePosition, Vec3 endpoint, Entity player){
+        //COLLIDER ignored non-solid blocks (like grass :) )
         ClipContext clipContext = new ClipContext(eyePosition, endpoint, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player);
         return player.level().clip(clipContext);
     }
