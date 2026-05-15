@@ -11,6 +11,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
@@ -20,7 +21,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -32,6 +32,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -140,6 +141,8 @@ public class ClientTasks {
                     currentChargeValue = -1;
                     chargeProgressPercentage = 0;
                     canMineFirstClick = false;
+                    //Clear list
+                    entityHitResultList.clear();
                 }
             } else if (canMineFirstClick){
                 canMineFirstClick = false;
@@ -150,6 +153,8 @@ public class ClientTasks {
             currentChargeValue = -1;
             chargeProgressPercentage = 0;
             canMineFirstClick = false;
+            //Clear list
+            entityHitResultList.clear();
         }
     }
 
@@ -270,5 +275,23 @@ public class ClientTasks {
         vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
 
         poseStack.popPose();
+    }
+
+    //Render an (over/under)lay on the crosshair when a target can be hit
+    public static void renderCrosshair(RenderGuiEvent.Pre event){
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.options.hideGui) return;
+        if(mc.options.getCameraType().isFirstPerson() && !entityHitResultList.isEmpty()) {
+            GuiGraphics guiGraphics = event.getGuiGraphics();
+            //Green
+            int color = 0xFF007A68;
+
+            int screenWidth = mc.getWindow().getGuiScaledWidth();
+            int screenHeight = mc.getWindow().getGuiScaledHeight();
+            int x = screenWidth / 2;
+            int y = screenHeight / 2;
+            guiGraphics.fill(x - 1, y - 4, x, y + 5, color);
+            guiGraphics.fill(x - 5, y, x + 4, y + 1, color);
+        }
     }
 }

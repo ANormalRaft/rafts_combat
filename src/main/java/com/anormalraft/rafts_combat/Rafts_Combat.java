@@ -9,6 +9,7 @@ import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -22,7 +23,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -132,6 +136,14 @@ public class Rafts_Combat {
             event.setCanceled(true);
             //Thank you Random from Neoforge discord
             event.setCancellationResult(InteractionResult.FAIL);
+        }
+    }
+
+    //Render an (over/under)lay on the crosshair when a target can be hit. Clientside event
+    @SubscribeEvent
+    public void onRenderCrosshair(RenderGuiEvent.Pre event) {
+        if(ClientConfig.CROSSHAIR_COLOR.get()) {
+            ClientTasks.renderCrosshair(event);
         }
     }
 }
