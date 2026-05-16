@@ -11,8 +11,8 @@ public class ServerConfig {
             .defineInRange("knockback_threshold", 0.6,0, 1);
 
     public static final ModConfigSpec.DoubleValue WIDTH_RATIO = BUILDER
-            .comment("Rato which determines how wide the default range indicator shall be at max charge")
-            .defineInRange("width_ratio", 0.4, 0, 1);
+            .comment("Rato which determines how wide your range (+range indicator) shall be at max charge. The range indicator shows you your reach at max range, but your reach is much wider at close range (an the range indicator won't reflect that, but it will change color when a target is detected)")
+            .defineInRange("width_ratio", 0.3, 0, 1);
 
     public static final ModConfigSpec.ConfigValue<String> CUSTOM_RATIOS = BUILDER
             .comment("String that stores information about what width ratios are applied to which items (either RegEx or strictly formatted list). Follow the syntax of the default value closely. \nDefault:  \"{\\\"0.2\\\": \\\"trident$\\\", \\\"0.5\\\": \\\"[minecraft:mace, minecraft:netherite_axe]\\\"}\"")

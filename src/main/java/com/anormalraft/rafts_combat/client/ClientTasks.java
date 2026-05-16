@@ -200,13 +200,15 @@ public class ClientTasks {
                     }
                 }
                 double offsetXZ = -(interactionRange * turnRatio);
-                double offsetY = 0.0;
+                double offsetY = (interactionRange * 0);
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
 
 
                 //Summons all remaining offsets & get their results
-                VectorUtils.raycastOffsets(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, interactionRange, player, entityHitResultList);
+                VectorUtils.raycastOffsetsNotEyePosBound(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, interactionRange, player, entityHitResultList);
+//                VectorUtils.raycastOffsetsEyePosBound(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, interactionRange, player, entityHitResultList);
+
                 //Remove all nulls
                 entityHitResultList.removeIf(Objects::isNull);
 

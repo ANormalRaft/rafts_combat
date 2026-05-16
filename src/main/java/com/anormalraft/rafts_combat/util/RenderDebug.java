@@ -73,13 +73,15 @@ public class RenderDebug {
                 poseStack.pushPose();
 
                 //Inverse viewbob tests
-                double[] sinCosValuesArray = VectorUtils.sinCosAngleValues();
+                if(Minecraft.getInstance().options.bobView().get()) {
+                    double[] sinCosValuesArray = VectorUtils.sinCosAngleValues();
 
-                float f = player.walkDist - player.walkDistO;
-                float f1 = -(player.walkDist + f * partialTick);
-                float f2 = Mth.lerp(partialTick, player.oBob, player.bob);
+                    float f = player.walkDist - player.walkDistO;
+                    float f1 = -(player.walkDist + f * partialTick);
+                    float f2 = Mth.lerp(partialTick, player.oBob, player.bob);
 
-                poseStack.translate((Math.abs(Mth.cos(f1 * (float)Math.PI) * f2) * sinCosValuesArray[3-1] * -sinCosValuesArray[1-1]) + ((Mth.sin(f1 * (float)Math.PI) * f2 * 0.5F) * sinCosValuesArray[2-1]), (Math.abs(Mth.cos(f1 * (float)Math.PI) * f2) * sinCosValuesArray[4-1]), (Math.abs(Mth.cos(f1 * (float)Math.PI) * f2) * sinCosValuesArray[3-1] * sinCosValuesArray[2-1]) + ((Mth.sin(f1 * (float)Math.PI) * f2 * 0.5F) * sinCosValuesArray[1-1]));
+                    poseStack.translate((Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * -sinCosValuesArray[1 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[2 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[4 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * sinCosValuesArray[2 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[1 - 1]));
+                }
 
 //                poseStack.mulPose(Axis.XN.rotationDegrees(Math.abs(Mth.cos(f1 * (float)Math.PI - 0.2F) * f2) * 5.0F));
 //                poseStack.mulPose(Axis.ZN.rotationDegrees((float) ((Mth.sin(trueF1 * (float)Math.PI) * trueF2 * 3.0F))));
@@ -90,17 +92,20 @@ public class RenderDebug {
 
                 //Line stuff (look at FishingHookRenderer or EntityRenderDispatcher). Don't use Tesselator as that is only for GUI
                 MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-                VertexConsumer vertexBuffer = bufferSource.getBuffer(debugLinesNoDepth);
+                VertexConsumer vertexBuffer = bufferSource.getBuffer(RenderType.lines());
                 //Raycast Vertices
                 vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
                 vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
 
                 //Offset vectors
-                double offsetXZ = -0.5;
-                double offsetY = 0.5;
+                double turnRatio = 0.4;
+                double offsetXZ = -(interactionRange * turnRatio);
+                double offsetY = -(interactionRange * 0.1);
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
-                Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY,endpoint);
-                VectorUtils.renderOffsets(lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint , vertexBuffer, pose);
+                Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
+//                VectorUtils.renderOffsets(lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, vertexBuffer, pose);
+                //Test
+                VectorUtils.renderOffsetsNotEyePosBound(lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, vertexBuffer, pose);
 //                bufferSource.endBatch(RenderType.lines());
 
                 //Render the visible quad representing range

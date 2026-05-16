@@ -98,7 +98,7 @@ public class VectorUtils {
     }
 
     //Renders more offset vectors in-between the endpoint and the lastOffsetVector in a line and mirrors them
-    public static void renderOffsets(Vec3 lastOffsetVector , Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, VertexConsumer vertexBuffer, PoseStack.Pose pose){
+    public static void renderOffsetsEyePosBound(Vec3 lastOffsetVector , Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, VertexConsumer vertexBuffer, PoseStack.Pose pose){
         //Last Offset from endpoint
         vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
         vertexBuffer.addVertex(pose, lastOffsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
@@ -119,6 +119,38 @@ public class VectorUtils {
             Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i/segmentAmount);
             Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
             vertexBuffer.addVertex(pose, eyePosition.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBuffer.addVertex(pose, newOffsetMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+        }
+    }
+
+    //The endpoints remain the same from the one above, but their start positions are recalculated to be at a horizontal offset to the start position as well
+    public static void renderOffsetsNotEyePosBound(Vec3 lastOffsetVector , Vec3 lastOffsetVectorMirrored, Vec3 scaledViewVector, Vec3 endpoint, VertexConsumer vertexBuffer, PoseStack.Pose pose){
+        //Calculate the starting point with the view vector
+        Vec3 startLastOffset = lastOffsetVector.add(scaledViewVector.scale(-1));
+        Vec3 startLastOffsetMirrored = lastOffsetVectorMirrored.add(scaledViewVector.scale(-1));
+
+        //Last Offset from endpoint
+        vertexBuffer.addVertex(pose, startLastOffset.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+        vertexBuffer.addVertex(pose, lastOffsetVector.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+        //Mirrored
+        vertexBuffer.addVertex(pose, startLastOffsetMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+        vertexBuffer.addVertex(pose, lastOffsetVectorMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+
+        //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
+        Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
+        Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
+        int segmentAmount = 2;
+        for(int i = 1; i < segmentAmount; i++){
+            Vec3 segment = differenceEndpointLastOffset.scale((double) i/segmentAmount);
+            Vec3 newOffset = endpoint.add(segment);
+            Vec3 newStart = newOffset.add(scaledViewVector.scale(-1));
+            vertexBuffer.addVertex(pose, newStart.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
+            vertexBuffer.addVertex(pose, newOffset.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
+            //Mirror
+            Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i/segmentAmount);
+            Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
+            Vec3 newStartMirrored = newOffsetMirrored.add(scaledViewVector.scale(-1));
+            vertexBuffer.addVertex(pose, newStartMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
             vertexBuffer.addVertex(pose, newOffsetMirrored.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1,1,1).setColor(255, 0, 0, 255);
         }
     }
@@ -160,8 +192,8 @@ public class VectorUtils {
         }
     }
 
-    //Same as renderOffsets, but summons raycasts instead
-    public static void raycastOffsets(double chargeProgressPercentage, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player, ArrayList<EntityHitResult> arrayList){
+    //Same as renderOffsetsEyePosBound, but summons raycasts instead
+    public static void raycastOffsetsEyePosBound(double chargeProgressPercentage, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, Vec3 eyePosition, Vec3 endpoint, double interactionRange, Entity player, ArrayList<EntityHitResult> arrayList){
         //Last Offset from endpoint
         //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
         Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
@@ -183,6 +215,36 @@ public class VectorUtils {
         if(chargeProgressPercentage == 1){
             summonAndProcessRaycasts(eyePosition, lastOffsetVector, interactionRange, player, arrayList, false, exemptionList);
             summonAndProcessRaycasts(eyePosition, lastOffsetVectorMirrored, interactionRange, player, arrayList, false, exemptionList);
+        }
+    }
+
+    //Same as renderOffsetsNotEyePosBound, but summons raycasts instead
+    public static void raycastOffsetsNotEyePosBound(double chargeProgressPercentage, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, Vec3 scaledViewVector, Vec3 endpoint, double interactionRange, Entity player, ArrayList<EntityHitResult> arrayList){
+        //Last Offset from endpoint
+        //Puts offsetVectors between the endpoint and the lastOffsetVector at a given segment amount
+        Vec3 differenceEndpointLastOffset = endpoint.vectorTo(lastOffsetVector);
+        Vec3 differenceEndpointLastOffsetMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
+        int segmentAmount = 4;
+        ArrayList<Integer> exemptionList = new ArrayList<>();
+
+        for(int i = 1; i < segmentAmount; i++){
+            if((double) i/segmentAmount <= chargeProgressPercentage) {
+                Vec3 segment = differenceEndpointLastOffset.scale((double) i / segmentAmount);
+                Vec3 newOffset = endpoint.add(segment);
+                Vec3 newStart = newOffset.add(scaledViewVector.scale(-1));
+                summonAndProcessRaycasts(newStart, newOffset, interactionRange, player, arrayList, false, exemptionList);
+                //Mirrored
+                Vec3 segmentMirrored = differenceEndpointLastOffsetMirrored.scale((double) i / segmentAmount);
+                Vec3 newOffsetMirrored = endpoint.add(segmentMirrored);
+                Vec3 newStartMirrored = newOffsetMirrored.add(scaledViewVector.scale(-1));
+                summonAndProcessRaycasts(newStartMirrored, newOffsetMirrored, interactionRange, player, arrayList, false, exemptionList);
+            }
+        }
+        if(chargeProgressPercentage == 1){
+            Vec3 startLastOffset = lastOffsetVector.add(scaledViewVector.scale(-1));
+            Vec3 startLastOffsetMirrored = lastOffsetVectorMirrored.add(scaledViewVector.scale(-1));
+            summonAndProcessRaycasts(startLastOffset, lastOffsetVector, interactionRange, player, arrayList, false, exemptionList);
+            summonAndProcessRaycasts(startLastOffsetMirrored, lastOffsetVectorMirrored, interactionRange, player, arrayList, false, exemptionList);
         }
     }
 
