@@ -265,7 +265,7 @@ public class ClientTasks {
             colorValue = 0;
         }
 
-        //Quad rendering (representing extended horizontal range)
+        //Max range quads rendering
         vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
         vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
         vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
@@ -276,6 +276,24 @@ public class ClientTasks {
         vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
         vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
 
+        //Fullness indicators
+        if(chargeProgressPercentage == 1){
+            double fullnessWidth = 0.02;
+            double fullnessHeightRatio = 2;
+            Vec3 fullnessOffsetLeft = chargeAccurateOffsetVector.add(endpoint.vectorTo(lastOffsetVector).scale(fullnessWidth));
+            Vec3 fullnessOffsetRight = chargeAccurateOffsetVector.add(endpoint.vectorTo(lastOffsetVector).scale(-fullnessWidth));
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeft.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRight.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRight.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeft.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            //Mirrored
+            Vec3 fullnessOffsetLeftMirrored = chargeAccurateOffsetVectorMirrored.add(endpoint.vectorTo(lastOffsetVectorMirrored).scale(fullnessWidth));
+            Vec3 fullnessOffsetRightMirrored = chargeAccurateOffsetVectorMirrored.add(endpoint.vectorTo(lastOffsetVectorMirrored).scale(-fullnessWidth));
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRightMirrored.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRightMirrored.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeftMirrored.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeftMirrored.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+        }
         poseStack.popPose();
     }
 
