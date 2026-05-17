@@ -118,8 +118,6 @@ public class Rafts_Combat {
         });
     }
 
-    //TODO: Should the vectors be horizontally offset as well? (I think not). If not, change the quads to triangles 4 style
-
     //Perform Rendering
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
