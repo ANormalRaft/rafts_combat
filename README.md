@@ -6,6 +6,8 @@ A mod that aims to give the player's basic attacks more reach whilst staying clo
 
 It functions by progressively summoning raycasts which are horizontally parallel the player's view vector. Their max range is represented by the range indicator which grows larger as the attack key is held, until it reaches its maximum width. Upon reaching maximum width, the fullness indicator will apear at the edge of the range indicator. On release of the attack key, the attack will be performed and will hit all entities detected in the "area" (the raycasts were designed as such that they "pierce" entities and as such will not only hit the first entity in front of you but the ones behind it as well). The horizontal offset is necessary in order to hit targets which are very near the player but which are present outside the range indicator:
 
+![](extras/side_hits_web.webp)
+
 (image here)
 
 The indicator will switch to a red color if at least one entity is detected within range
@@ -18,9 +20,7 @@ A special interaction happens with shields: When a charge is ongoing and a shiel
 
 Critical Hits and Mace attacks are also special in the sense that the mod restricts them to the first attack which is registered, otherwise the damage would go too crazy. Raycasts near the crosshair should be prioritized since they are created and handled first.
 
-The mod works on all items that have the `c:tools/melee_weapon` tag. If the item also happens to be a tool which has blocks on which it is effective on (such as axes on wood), then the mod will first check if the block being targeted by the crosshair raycast is a block which benefits from the tool. If it is, then the tool will enter its harvest mode until the attack button is released. If no such blocks are detected, then the tool will be treated as a weapon and a charge will initiate:
-
-(video here)
+The mod works on all items that have the `c:tools/melee_weapon` tag. If the item also happens to be a tool which has blocks on which it is effective on (such as axes on wood), then the mod will first check if the block being targeted by the crosshair raycast is a block which benefits from the tool. If it is, then the tool will enter its harvest mode until the attack button is released. If no such blocks are detected, then the tool will be treated as a weapon and a charge will initiate
 
 ## Limitations
 
