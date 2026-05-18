@@ -107,6 +107,7 @@ public class Rafts_Combat {
         });
 
         //DataUtils hashmap init sent to client. Perhaps could be a future config option, but for now no
+        //TODO: config 4 this
         HashMap<String, String> tagsMap = new HashMap<>(5);
         tagsMap.put("minecraft:axes", "minecraft:mineable/axe");
         tagsMap.put("minecraft:pickaxes","minecraft:mineable/pickaxe");
