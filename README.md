@@ -1,8 +1,8 @@
 # Raft's Combat
 
-A mod that aims to give the player's basic attacks more reach whilst staying close to vanilla's instantaneous attacks feel. Inspired by SKADA and Better Combat.
+A mod that aims to give the player's basic attacks more reach whilst staying close to vanilla's instantaneous attacks feel. Inspired by SKADA and Better Combat:
 
-(video here)
+![](extras/main_hits_web.webp)
 
 It functions by progressively summoning raycasts which are horizontally parallel the player's view vector. Their max range is represented by the range indicator which grows larger as the attack key is held, until it reaches its maximum width. Upon reaching maximum width, the fullness indicator will apear at the edge of the range indicator. On release of the attack key, the attack will be performed and will hit all entities detected in the "area" (the raycasts were designed as such that they "pierce" entities and as such will not only hit the first entity in front of you but the ones behind it as well). The horizontal offset is necessary in order to hit targets which are very near the player but which are present outside the range indicator:
 
