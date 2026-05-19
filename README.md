@@ -10,17 +10,19 @@ It functions by progressively summoning raycasts which are horizontally parallel
 
 ![](extras/side_hits_web.webp)
 
-The indicator will switch to a red color if at least one entity is detected within range
+- The indicator will switch to a red color if at least one entity is detected within range
 
-Tamed entities which you own shouldn't be targetable. The same is true for mounts that are tamed and that aren't targeting the player (since for some reason they don't have owners, thanks Mojang)
+- Tamed entities which you own shouldn't be targetable. The same is true for mounts that are tamed and that aren't targeting the player (since for some reason they don't have owners, thanks Mojang)
 
-Similar to bows, the attack can be cancelled by scrolling to another item in the hotbar
+- Similar to bows, the attack can be cancelled by scrolling to another item in the hotbar
 
-A special interaction happens with shields: When a charge is ongoing and a shield is held up, there is no need to also hold the attack key to continue the charge. The attack will happen as soon as the shield is lowered. This is to reduce the mental load of managing the mouse. For now, only the shield has this functionality
+- A special interaction happens with shields: When a charge is ongoing and a shield is held up, there is no need to also hold the attack key to continue the charge. The attack will happen as soon as the shield is lowered. This is to reduce the mental load of managing the mouse. For now, only the shield has this functionality
 
-Critical Hits and Mace attacks are also special in the sense that the mod restricts them to the first attack which is registered, otherwise the damage would go too crazy. Raycasts near the crosshair should be prioritized since they are created and handled first.
+- Critical Hits and Mace attacks are also special in the sense that the mod restricts them to the first attack which is registered, otherwise the damage would go too crazy. Raycasts near the crosshair should be prioritized since they are created and handled first.
 
-The mod works on all items that have the `c:tools/melee_weapon` tag. If the item also happens to be a tool which has blocks on which it is effective on (such as axes on wood), then the mod will first check if the block being targeted by the crosshair raycast is a block which benefits from the tool. If it is, then the tool will enter its harvest mode until the attack button is released. If no such blocks are detected, then the tool will be treated as a weapon and a charge will initiate
+- The mod works on all items that have the `c:tools/melee_weapon` tag. If the item also happens to be a tool which has blocks on which it is effective on (such as axes on wood), then the mod will first check if the block being targeted by the crosshair raycast is a block which benefits from the tool. If it is, then the tool will enter its harvest mode until the attack button is released. If no such blocks are detected, then the tool will be treated as a weapon and a charge will initiate
+
+- Pairs well with other mods which modify the range of weapons 
 
 ## Limitations
 
