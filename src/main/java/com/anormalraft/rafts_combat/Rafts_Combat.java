@@ -1,6 +1,6 @@
 package com.anormalraft.rafts_combat;
 
-import com.anormalraft.rafts_combat.client.AttackZoneHud;
+import com.anormalraft.rafts_combat.client.RangeIndicatorHud;
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.config.ClientConfig;
 import com.anormalraft.rafts_combat.config.ServerConfig;
@@ -8,18 +8,11 @@ import com.anormalraft.rafts_combat.networking.CustomWidthArrayPayload.CustomWid
 import com.anormalraft.rafts_combat.networking.MatchingTagsPayload.MatchingTagsPayload;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
-import com.anormalraft.rafts_combat.util.RenderDebug;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ItemTags;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -144,9 +137,8 @@ public class Rafts_Combat {
     //Register our custom GUI layer
     //Thanks DERPZ
     public void onRegisterGui(RegisterGuiLayersEvent event){
-        event.registerAbove(VanillaGuiLayers.CROSSHAIR, ResourceLocation.fromNamespaceAndPath("rafts_combat","rafts_combat_attack_zone_hud"), new AttackZoneHud());
+        event.registerAbove(VanillaGuiLayers.CROSSHAIR, ResourceLocation.fromNamespaceAndPath("rafts_combat","rafts_combat_range_indicator_hud"), new RangeIndicatorHud());
     }
 }
 
 //TODO: Put the rendering on the GUI instead of the world
-//TODO: Make configs compatible with the Configured mod?

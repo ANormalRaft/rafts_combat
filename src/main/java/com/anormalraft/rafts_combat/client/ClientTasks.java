@@ -166,7 +166,7 @@ public class ClientTasks {
                 if(maxChargeThreshold < 0 || currentChargeValue < 0){
                     return;
                 }
-                chargeProgressPercentage = (double) currentChargeValue /maxChargeThreshold;
+                chargeProgressPercentage = (double) currentChargeValue / maxChargeThreshold;
                 float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
                 double interactionRange = player.entityInteractionRange();
                 Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
