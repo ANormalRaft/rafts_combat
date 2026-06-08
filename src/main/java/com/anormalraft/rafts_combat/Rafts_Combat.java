@@ -1,5 +1,6 @@
 package com.anormalraft.rafts_combat;
 
+import com.anormalraft.rafts_combat.client.AttackZoneHud;
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.config.ClientConfig;
 import com.anormalraft.rafts_combat.config.ServerConfig;
@@ -23,10 +24,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
-import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.*;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -61,6 +59,8 @@ public class Rafts_Combat {
     public Rafts_Combat(IEventBus modEventBus, ModContainer modContainer) {
         //Register Networking Payloads
         modEventBus.addListener(PayloadHousekeeping::registerPayload);
+        //Gui layer
+        modEventBus.addListener(this::onRegisterGui);
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (ExampleMod) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
@@ -141,11 +141,12 @@ public class Rafts_Combat {
         }
     }
 
-    //Render an (over/under)lay on the crosshair when a target can be hit. Clientside event
-    @SubscribeEvent
-    public void onRenderCrosshair(RenderGuiEvent.Pre event) {
-        if(ClientConfig.CROSSHAIR_COLOR.get()) {
-            ClientTasks.renderCrosshair(event);
-        }
+    //Register our custom GUI layer
+    //Thanks DERPZ
+    public void onRegisterGui(RegisterGuiLayersEvent event){
+        event.registerAbove(VanillaGuiLayers.CROSSHAIR, ResourceLocation.fromNamespaceAndPath("rafts_combat","rafts_combat_attack_zone_hud"), new AttackZoneHud());
     }
 }
+
+//TODO: Put the rendering on the GUI instead of the world
+//TODO: Make configs compatible with the Configured mod?

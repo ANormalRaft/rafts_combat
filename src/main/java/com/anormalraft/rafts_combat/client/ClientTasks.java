@@ -298,22 +298,4 @@ public class ClientTasks {
         }
         poseStack.popPose();
     }
-
-    //Render an (over/under)lay on the crosshair when a target can be hit
-    public static void renderCrosshair(RenderGuiEvent.Pre event){
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options.hideGui) return;
-        if(mc.options.getCameraType().isFirstPerson() && !entityHitResultList.isEmpty()) {
-            GuiGraphics guiGraphics = event.getGuiGraphics();
-            //Green
-            int color = 0xFF007A68;
-
-            int screenWidth = mc.getWindow().getGuiScaledWidth();
-            int screenHeight = mc.getWindow().getGuiScaledHeight();
-            int x = screenWidth / 2;
-            int y = screenHeight / 2;
-            guiGraphics.fill(x - 1, y - 4, x, y + 5, color);
-            guiGraphics.fill(x - 5, y, x + 4, y + 1, color);
-        }
-    }
 }
