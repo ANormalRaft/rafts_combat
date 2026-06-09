@@ -27,11 +27,12 @@ public class RangeIndicatorHud implements LayeredDraw.Layer {
 
     //Range indicator progression bars
     public void renderRangeIndicators(int centerX, int centerY, GuiGraphics guiGraphics, Minecraft mc){
-        int halfHeight = 2;
+        int halfHeight = ClientConfig.BAR_HEIGHT.getAsInt();
         //Fov adjustment
         int fovNumber = mc.options.fov().get();
         //70 is Normal value
         double fovDifference = 70 - fovNumber;
+        //These values were found through testing
         double fovMultiplier = 0.04;
         if(fovDifference < 0){
             fovMultiplier = 0.012;
@@ -50,23 +51,47 @@ public class RangeIndicatorHud implements LayeredDraw.Layer {
             colorString = "FF0000";
         }
         String alphaString = Integer.toHexString(currentAlpha).toUpperCase();
-        String finalColorString = "0x" + alphaString + colorString;
-        int colorValue = Integer.decode(finalColorString);
+        String finalColorString = alphaString + colorString;
+        int colorValue = Integer.parseUnsignedInt(finalColorString, 16);
+        //For fullness indicators
+        String fullAlphaColorString = "FF" + colorString;
+        int fullAlphaColorValue = Integer.parseUnsignedInt(fullAlphaColorString, 16);
         int noColorValue = 0x00000000;
 
-        //Draw bar (similarly as within GuiGraphics)
+        //Draw range indicator bars (similarly as within GuiGraphics)
         int z = 0;
         float chargeAccurateLength = (float) (horizontalLength * ClientTasks.chargeProgressPercentage);
+        float chargeApexLengthLeft = centerX - chargeAccurateLength;
+        float chargeApexLengthRight = centerX + chargeAccurateLength;
         Matrix4f matrix4f = guiGraphics.pose().last().pose();
         VertexConsumer vertexBuffer = guiGraphics.bufferSource().getBuffer(RenderType.gui());
-        vertexBuffer.addVertex(matrix4f, centerX,centerY+halfHeight, z).setColor(noColorValue);
-        vertexBuffer.addVertex(matrix4f, centerX,centerY-halfHeight, z).setColor(noColorValue);
-        vertexBuffer.addVertex(matrix4f, centerX-chargeAccurateLength,centerY-halfHeight, z).setColor(colorValue);
-        vertexBuffer.addVertex(matrix4f, centerX-chargeAccurateLength,centerY+halfHeight, z).setColor(colorValue);
+        vertexBuffer.addVertex(matrix4f, centerX,centerY + halfHeight, z).setColor(noColorValue);
+        vertexBuffer.addVertex(matrix4f, centerX,centerY - halfHeight, z).setColor(noColorValue);
+        vertexBuffer.addVertex(matrix4f, chargeApexLengthLeft,centerY - halfHeight, z).setColor(colorValue);
+        vertexBuffer.addVertex(matrix4f, chargeApexLengthLeft,centerY + halfHeight, z).setColor(colorValue);
         //Mirror
+        vertexBuffer.addVertex(matrix4f, centerX,centerY - halfHeight, z).setColor(noColorValue);
+        vertexBuffer.addVertex(matrix4f, centerX,centerY + halfHeight, z).setColor(noColorValue);
+        vertexBuffer.addVertex(matrix4f, chargeApexLengthRight,centerY + halfHeight, z).setColor(colorValue);
+        vertexBuffer.addVertex(matrix4f, chargeApexLengthRight,centerY - halfHeight, z).setColor(colorValue);
+
+        //Render fullness indicators
+        if(ClientTasks.chargeProgressPercentage == 1) {
+            int fullnessHOffset = 2;
+            int fullnessVOffset = halfHeight + 1;
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthLeft + fullnessHOffset, centerY + fullnessVOffset, z).setColor(fullAlphaColorValue);
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthLeft + fullnessHOffset, centerY - fullnessVOffset, z).setColor(fullAlphaColorValue);
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthLeft - fullnessHOffset, centerY - fullnessVOffset, z).setColor(fullAlphaColorValue);
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthLeft - fullnessHOffset, centerY + fullnessVOffset, z).setColor(fullAlphaColorValue);
+            //Mirror
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthRight - fullnessHOffset, centerY - fullnessVOffset, z).setColor(fullAlphaColorValue);
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthRight - fullnessHOffset, centerY + fullnessVOffset, z).setColor(fullAlphaColorValue);
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthRight + fullnessHOffset, centerY + fullnessVOffset, z).setColor(fullAlphaColorValue);
+            vertexBuffer.addVertex(matrix4f, chargeApexLengthRight + fullnessHOffset, centerY - fullnessVOffset, z).setColor(fullAlphaColorValue);
+        }
     }
 
-    //render override
+    //render override (what actually renders the elements)
     @Override
     public void render(@NotNull GuiGraphics guiGraphics, @NotNull DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
@@ -76,6 +101,10 @@ public class RangeIndicatorHud implements LayeredDraw.Layer {
             int screenHeight = mc.getWindow().getGuiScaledHeight();
             int centerX = screenWidth / 2;
             int centerY = screenHeight / 2;
+            //When in fullscreen, the crosshair moved by one pixel, so we compensate
+            if(mc.options.fullscreen().get()){
+                centerY -= 1;
+            }
             //Crosshair
             if(ClientConfig.CROSSHAIR_COLOR.get()) {
                 renderCrosshair(centerX, centerY, guiGraphics);

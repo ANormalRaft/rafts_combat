@@ -46,7 +46,3 @@ I love configuration, so if there are relevant features which you would want to 
 - By default, attacks do not do knockback if the charge is below 60%. This is to avoid knockback spam with low-commital attacks, *but you may be into that* so there is an option to specify where the minimal % should be for knockback to be incurred
 - The default width (ratio) of the attack range indicator
 - Custom widths for specific items. Regex and lists both are supported, but have to be implemented through a very cursed string format. See config example
-
-## Help Wanted From Benevolant Rendering Wizards (Technical Jargon Ahead!)
-
-I personally don't know how to reverse roll transformations to the poseStack so that the rendered attack range indicator won't bob like crazy when view bobbing is on (whislt walking) whilst keeping its effect on the camera roll, so the solution so far is to eliminate the camera roll when view bobbing is on. To be fair, to be it's barely noticeable but it is worth mentioning. For those who don't know what I mean, the attack range indicator will display this behavior when you have it active and you receive damage, but I find this acceptable since the damage window is short compared to having view bobbing forever on. 

@@ -1,11 +1,11 @@
 package com.anormalraft.rafts_combat.util;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
+import com.anormalraft.rafts_combat.config.ClientConfig;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.math.Axis;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -31,13 +31,11 @@ import static net.minecraft.client.renderer.RenderStateShard.NO_CULL;
 public class RenderDebug {
     //Debug lines but no depth test
     public static RenderType debugLinesNoDepth = RenderType.create("lines_no_depth", DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES, 1536,RenderType.CompositeState.builder().setShaderState(RENDERTYPE_LINES_SHADER).setLineState(new RenderStateShard.LineStateShard(OptionalDouble.empty())).setLayeringState(VIEW_OFFSET_Z_LAYERING).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setOutputState(ITEM_ENTITY_TARGET).setWriteMaskState(COLOR_DEPTH_WRITE).setCullState(NO_CULL).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
+    //To render my quad correctly (no depth test)
+    public static RenderType chargeMeterRenderType = RenderType.create("charge_meter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1536, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
 
-    //Test
-    public static float trueF1 = 0;
-    public static float trueF2 = 0;
-
-    //For debugging only
-    public static void debugRender(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
+    //Debugging lines
+    public static void debugRenderLines(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         //Needed or else we draw on all stages and some render weirdly
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
             if (event.getCamera().getEntity() instanceof Player player) {
@@ -105,7 +103,7 @@ public class RenderDebug {
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
 //                VectorUtils.renderOffsets(lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, vertexBuffer, pose);
                 //Test
-                VectorUtils.renderOffsetsNotEyePosBound(lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, vertexBuffer, pose);
+                VectorUtils.renderOffsetLinesSpread(lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, vertexBuffer, pose);
 //                bufferSource.endBatch(RenderType.lines());
 
                 //Render the visible quad representing range
@@ -113,7 +111,7 @@ public class RenderDebug {
                 Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI, 0, viewVector).normalize();
                 Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(0.05);
 
-                VertexConsumer vertexBufferQuad = bufferSource.getBuffer(ClientTasks.chargeMeterRenderType);
+                VertexConsumer vertexBufferQuad = bufferSource.getBuffer(chargeMeterRenderType);
 
                 vertexBufferQuad.addVertex(pose, lastOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 100);
                 vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, 255, 255, 0);
@@ -124,5 +122,85 @@ public class RenderDebug {
                 poseStack.popPose();
             }
         }
+    }
+
+    //Debugging quads
+    //Renders the quads and performs the calculations required to render them
+    public static void debugRenderQuads(RenderLevelStageEvent event, Vec3 mainCameraPosition, Vec3 viewVector, Vec3 endpoint, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, double chargeProgressPercentage, double interactionRange, Player player, float partialTick){
+        //PoseStack stuff
+        PoseStack poseStack = event.getPoseStack();
+        poseStack.pushPose();
+
+        //ViewBobbing (doesn't do roll transformations. These are cancelled with the ViewBobbingGameRendererMixin)
+        if(Minecraft.getInstance().options.bobView().get()) {
+            double[] sinCosValuesArray = VectorUtils.sinCosAngleValues();
+
+            float f = player.walkDist - player.walkDistO;
+            float f1 = -(player.walkDist + f * partialTick);
+            float f2 = Mth.lerp(partialTick, player.oBob, player.bob);
+
+            poseStack.translate((Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * -sinCosValuesArray[1 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[2 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[4 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * sinCosValuesArray[2 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[1 - 1]));
+        }
+
+        //Thank you TopSnek & Zergatul from the Forge Forums <3
+        poseStack.translate(-mainCameraPosition.x, -mainCameraPosition.y, -mainCameraPosition.z);
+        PoseStack.Pose pose = poseStack.last();
+        //Buffer stuff
+        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer vertexBufferQuad = bufferSource.getBuffer(chargeMeterRenderType);
+
+        //Calculate the "always left" vector
+        Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI, 0, viewVector).normalize();
+        //The scale must be a ratio from the interaction range to keep its "zoom"
+        double quadHeight = interactionRange * 0.005;
+        Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(quadHeight);
+
+        //Calculate reveal position
+        Vec3 voidedEndpointToLastOffsetVector = endpoint.vectorTo(lastOffsetVector);
+        Vec3 voidedChargeAccurateOffsetVector = voidedEndpointToLastOffsetVector.scale(chargeProgressPercentage);
+        Vec3 chargeAccurateOffsetVector = endpoint.add(voidedChargeAccurateOffsetVector);
+        Vec3 voidedEndpointToLastOffsetVectorMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
+        Vec3 voidedChargeAccurateOffsetVectorMirrored = voidedEndpointToLastOffsetVectorMirrored.scale(chargeProgressPercentage);
+        Vec3 chargeAccurateOffsetVectorMirrored = endpoint.add(voidedChargeAccurateOffsetVectorMirrored);
+        //Calculate alpha value
+        int maxAlpha = ClientConfig.MAX_ALPHA.get();
+        int minAlpha = 0;
+        int currentAlpha = Mth.floor((maxAlpha * chargeProgressPercentage) + minAlpha);
+        //Turn it red when it detects at least 1 target
+        int colorValue = 255;
+        if(!ClientTasks.entityHitResultList.isEmpty()){
+            colorValue = 0;
+        }
+
+        //Max range quads rendering
+        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+        //Mirror it (HOLY FUCK WHY WAS THIS SO HARD TO FIGURE OUT)
+        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
+        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
+
+        //Fullness indicators
+        if(chargeProgressPercentage == 1){
+            double fullnessWidth = 0.03;
+            double fullnessHeightRatio = 2;
+            Vec3 fullnessOffsetLeft = chargeAccurateOffsetVector.add(voidedEndpointToLastOffsetVector.normalize().scale(fullnessWidth));
+            Vec3 fullnessOffsetRight = chargeAccurateOffsetVector.add(voidedEndpointToLastOffsetVector.normalize().scale(-fullnessWidth));
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeft.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRight.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRight.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeft.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            //Mirrored
+            Vec3 fullnessOffsetLeftMirrored = chargeAccurateOffsetVectorMirrored.add(voidedEndpointToLastOffsetVectorMirrored.normalize().scale(fullnessWidth));
+            Vec3 fullnessOffsetRightMirrored = chargeAccurateOffsetVectorMirrored.add(voidedEndpointToLastOffsetVectorMirrored.normalize().scale(-fullnessWidth));
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRightMirrored.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetRightMirrored.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeftMirrored.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+            vertexBufferQuad.addVertex(pose, fullnessOffsetLeftMirrored.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
+        }
+        poseStack.popPose();
     }
 }

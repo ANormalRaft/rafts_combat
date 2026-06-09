@@ -1,21 +1,12 @@
 package com.anormalraft.rafts_combat.client;
 
-import com.anormalraft.rafts_combat.config.ClientConfig;
 import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.anormalraft.rafts_combat.networking.HurtPayload.HurtPayload;
 import com.anormalraft.rafts_combat.util.DataUtils;
 import com.anormalraft.rafts_combat.util.VectorUtils;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderStateShard;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
@@ -25,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
@@ -32,21 +24,15 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.lwjgl.opengl.GL11;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
-import static net.minecraft.client.renderer.RenderStateShard.*;
-
 @Mod(value = "rafts_combat", dist = Dist.CLIENT)
 public class ClientTasks {
-    //To render my quad correctly (no depth test)
-    public static RenderType chargeMeterRenderType = RenderType.create("charge_meter", DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS, 1536, false, true, RenderType.CompositeState.builder().setShaderState(POSITION_COLOR_SHADER).setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(new RenderStateShard.DepthTestStateShard("respectmyalphavalueuprick", GL11.GL_NOTEQUAL)).createCompositeState(false));
     //Detects click behavior
     public static boolean canRaftSwing = false;
     //Item data (no need to add a modifier since these values can and should be modified through KubeJS)
@@ -63,7 +49,8 @@ public class ClientTasks {
     //Key input logic
     public static void handleAttack() {
         LocalPlayer player = Minecraft.getInstance().player;
-        if(player == null) {
+        Level level = Minecraft.getInstance().level;
+        if(player == null || level == null) {
             return;
         }
         //If we already are using a prohibited item, do not start a charge
@@ -88,7 +75,7 @@ public class ClientTasks {
                     if(blockHitResult.getType() != HitResult.Type.MISS){
                         ItemStack itemStack = player.getMainHandItem();
                         BlockPos blockPos = blockHitResult.getBlockPos();
-                        BlockState blockState = Minecraft.getInstance().level.getBlockState(blockPos);
+                        BlockState blockState = level.getBlockState(blockPos);
                         if(!canMineFirstClick) {
                             canMineFirstClick = DataUtils.tagMatchAny(itemStack, blockState);
                         }
@@ -204,98 +191,18 @@ public class ClientTasks {
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
 
-
                 //Summons all remaining offsets & get their results
-                VectorUtils.raycastOffsetsNotEyePosBound(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, interactionRange, player, entityHitResultList);
-//                VectorUtils.raycastOffsetsEyePosBound(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, interactionRange, player, entityHitResultList);
-
-                //Remove all nulls
+                VectorUtils.raycastOffsetsSpread(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, interactionRange, player, entityHitResultList);
+                //Remove nulls
                 entityHitResultList.removeIf(Objects::isNull);
 
-                //Rendering, only in first person
-                if(Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
-                    renderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange, player, partialTick);
-                }
+                //The rendering is done in RangeIndicatorHud
+
+                //debug Quads if needed
+//                if(Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
+//                    RenderDebug.debugRenderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange, player, partialTick);
+//                }
             }
         }
-    }
-
-    //Renders the quads and performs the calculations required to render them
-    public static void renderQuads(RenderLevelStageEvent event, Vec3 mainCameraPosition, Vec3 viewVector, Vec3 endpoint, Vec3 lastOffsetVector, Vec3 lastOffsetVectorMirrored, double chargeProgressPercentage, double interactionRange, Player player, float partialTick){
-        //PoseStack stuff
-        PoseStack poseStack = event.getPoseStack();
-        poseStack.pushPose();
-
-        //ViewBobbing (doesn't do roll transformations. These are cancelled with the ViewBobbingGameRendererMixin)
-        if(Minecraft.getInstance().options.bobView().get()) {
-            double[] sinCosValuesArray = VectorUtils.sinCosAngleValues();
-
-            float f = player.walkDist - player.walkDistO;
-            float f1 = -(player.walkDist + f * partialTick);
-            float f2 = Mth.lerp(partialTick, player.oBob, player.bob);
-
-            poseStack.translate((Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * -sinCosValuesArray[1 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[2 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[4 - 1]), (Math.abs(Mth.cos(f1 * (float) Math.PI) * f2) * sinCosValuesArray[3 - 1] * sinCosValuesArray[2 - 1]) + ((Mth.sin(f1 * (float) Math.PI) * f2 * 0.5F) * sinCosValuesArray[1 - 1]));
-        }
-
-        //Thank you TopSnek & Zergatul from the Forge Forums <3
-        poseStack.translate(-mainCameraPosition.x, -mainCameraPosition.y, -mainCameraPosition.z);
-        PoseStack.Pose pose = poseStack.last();
-        //Buffer stuff
-        MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer vertexBufferQuad = bufferSource.getBuffer(chargeMeterRenderType);
-
-        //Calculate the "always left" vector
-        Vec3 leftOrthogonalViewVector = VectorUtils.calculateOffsetVector(Mth.PI, 0, viewVector).normalize();
-        //The scale must be a ratio from the interaction range to keep its "zoom"
-        double quadHeight = interactionRange * ClientConfig.QUAD_HEIGHT.get();
-        Vec3 correctHeightDirection = viewVector.cross(leftOrthogonalViewVector).scale(quadHeight);
-
-        //Calculate reveal position
-        Vec3 voidedEndpointToLastOffsetVector = endpoint.vectorTo(lastOffsetVector);
-        Vec3 voidedChargeAccurateOffsetVector = voidedEndpointToLastOffsetVector.scale(chargeProgressPercentage);
-        Vec3 chargeAccurateOffsetVector = endpoint.add(voidedChargeAccurateOffsetVector);
-        Vec3 voidedEndpointToLastOffsetVectorMirrored = endpoint.vectorTo(lastOffsetVectorMirrored);
-        Vec3 voidedChargeAccurateOffsetVectorMirrored = voidedEndpointToLastOffsetVectorMirrored.scale(chargeProgressPercentage);
-        Vec3 chargeAccurateOffsetVectorMirrored = endpoint.add(voidedChargeAccurateOffsetVectorMirrored);
-        //Calculate alpha value
-        int maxAlpha = ClientConfig.MAX_ALPHA.get();
-        int minAlpha = 0;
-        int currentAlpha = Mth.floor((maxAlpha * chargeProgressPercentage) + minAlpha);
-        //Turn it red when it detects at least 1 target
-        int colorValue = 255;
-        if(!entityHitResultList.isEmpty()){
-            colorValue = 0;
-        }
-
-        //Max range quads rendering
-        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
-        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
-        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
-        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVector.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
-        //Mirror it (HOLY FUCK WHY WAS THIS SO HARD TO FIGURE OUT)
-        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
-        vertexBufferQuad.addVertex(pose, endpoint.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, minAlpha);
-        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
-        vertexBufferQuad.addVertex(pose, chargeAccurateOffsetVectorMirrored.add(correctHeightDirection.scale(-1)).toVector3f()).setColor(255, colorValue, colorValue, currentAlpha);
-
-        //Fullness indicators
-        if(chargeProgressPercentage == 1){
-            double fullnessWidth = 0.03;
-            double fullnessHeightRatio = 2;
-            Vec3 fullnessOffsetLeft = chargeAccurateOffsetVector.add(voidedEndpointToLastOffsetVector.normalize().scale(fullnessWidth));
-            Vec3 fullnessOffsetRight = chargeAccurateOffsetVector.add(voidedEndpointToLastOffsetVector.normalize().scale(-fullnessWidth));
-            vertexBufferQuad.addVertex(pose, fullnessOffsetLeft.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            vertexBufferQuad.addVertex(pose, fullnessOffsetRight.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            vertexBufferQuad.addVertex(pose, fullnessOffsetRight.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            vertexBufferQuad.addVertex(pose, fullnessOffsetLeft.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            //Mirrored
-            Vec3 fullnessOffsetLeftMirrored = chargeAccurateOffsetVectorMirrored.add(voidedEndpointToLastOffsetVectorMirrored.normalize().scale(fullnessWidth));
-            Vec3 fullnessOffsetRightMirrored = chargeAccurateOffsetVectorMirrored.add(voidedEndpointToLastOffsetVectorMirrored.normalize().scale(-fullnessWidth));
-            vertexBufferQuad.addVertex(pose, fullnessOffsetRightMirrored.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            vertexBufferQuad.addVertex(pose, fullnessOffsetRightMirrored.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            vertexBufferQuad.addVertex(pose, fullnessOffsetLeftMirrored.add(correctHeightDirection.scale(fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-            vertexBufferQuad.addVertex(pose, fullnessOffsetLeftMirrored.add(correctHeightDirection.scale(-fullnessHeightRatio)).toVector3f()).setColor(255, colorValue, colorValue, 255);
-        }
-        poseStack.popPose();
     }
 }
