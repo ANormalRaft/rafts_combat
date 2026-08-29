@@ -3,6 +3,7 @@ package com.anormalraft.rafts_combat.client;
 import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.anormalraft.rafts_combat.networking.HurtPayload.HurtPayload;
 import com.anormalraft.rafts_combat.util.DataUtils;
+import com.anormalraft.rafts_combat.util.RenderDebug;
 import com.anormalraft.rafts_combat.util.VectorUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -12,6 +13,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -89,14 +91,10 @@ public class ClientTasks {
                             currentChargeValue += 1;
                         }
                         //progressivelySummonRaycasts takes care of the raycast and rendering logic
+                    //If we are not already charging. Enable the charge
                     } else {
-                        //If we are not already charging. Enable the charge
-                        //If the mainhanditem item is a tool...
-                        ItemStack itemStack = player.getMainHandItem();
-                        //Get weapon data here & init charge meter data
-                        Optional<ItemAttributeModifiers.Entry> use_coolown = itemStack.getComponents().get(DataComponents.ATTRIBUTE_MODIFIERS).modifiers().stream().filter(attributeEntry -> attributeEntry.modifier().is(ResourceLocation.parse("minecraft:base_attack_speed"))).findFirst();
-                        double actualAttackSpeed = use_coolown.get().attribute().value().getDefaultValue() + use_coolown.get().modifier().amount();
-                        maxChargeThreshold = Mth.floor(20.0 / actualAttackSpeed);
+                        double playerAttackSpeed = player.getAttributeValue(Attributes.ATTACK_SPEED);
+                        maxChargeThreshold = Mth.floor(20.0 / playerAttackSpeed);
                         currentChargeValue = 0;
                         //...Flip the swing boolean
                         canRaftSwing = true;
@@ -146,63 +144,60 @@ public class ClientTasks {
     }
 
     //Rendering that depends on the charge meter data
-    public static void progressivelySummonRaycasts(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
-        //Needed or else we draw on all stages and some render weirdly
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
-            if (event.getCamera().getEntity() instanceof Player player) {
-                if(maxChargeThreshold < 0 || currentChargeValue < 0){
-                    return;
-                }
-                chargeProgressPercentage = (double) currentChargeValue / maxChargeThreshold;
-                float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
-                double interactionRange = player.entityInteractionRange();
-                Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
-                Vec3 mainCameraPosition = mainCamera.getPosition();
-                Vec3 eyePosition = new Vec3(mainCameraPosition.x, mainCameraPosition.y, mainCameraPosition.z);
-                Vec3 viewVector = player.getViewVector(partialTick);
-                Vec3 scaledViewVector = viewVector.scale(interactionRange);
+    public static void progressivelySummonRaycasts(RenderLevelStageEvent event) throws InvocationTargetException, NoSuchMethodException, IllegalAccessException {
+        if (event.getCamera().getEntity() instanceof Player player) {
+            if(maxChargeThreshold < 0 || currentChargeValue < 0){
+                return;
+            }
+            chargeProgressPercentage = (double) currentChargeValue / maxChargeThreshold;
+            float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+            double interactionRange = player.entityInteractionRange();
+            Camera mainCamera = Minecraft.getInstance().gameRenderer.getMainCamera();
+            Vec3 mainCameraPosition = mainCamera.getPosition();
+            Vec3 eyePosition = new Vec3(mainCameraPosition.x, mainCameraPosition.y, mainCameraPosition.z);
+            Vec3 viewVector = player.getViewVector(partialTick);
+            Vec3 scaledViewVector = viewVector.scale(interactionRange);
 
-                //Get the first person camera position when in third person(s)
-                boolean isFirstPerson = Minecraft.getInstance().options.getCameraType().isFirstPerson();
-                if (!isFirstPerson) {
-                    eyePosition = VectorUtils.getFirstPersonCameraPosition(mainCamera);
-                }
+            //Get the first person camera position when in third person(s)
+            boolean isFirstPerson = Minecraft.getInstance().options.getCameraType().isFirstPerson();
+            if (!isFirstPerson) {
+                eyePosition = VectorUtils.getFirstPersonCameraPosition(mainCamera);
+            }
 
-                //Player raycast (endpoint) position
-                Vec3 endpoint = eyePosition.add(scaledViewVector);
-                //Clear list
-                entityHitResultList.clear();
-                //Required for summonAndProcessRaycasts
-                ArrayList<Integer> exemptionList = new ArrayList<>();
-                //Raycast
-                VectorUtils.summonAndProcessRaycasts(eyePosition, endpoint, interactionRange, player, entityHitResultList, false, exemptionList);
+            //Player raycast (endpoint) position
+            Vec3 endpoint = eyePosition.add(scaledViewVector);
+            //Clear list
+            entityHitResultList.clear();
+            //Required for summonAndProcessRaycasts
+            ArrayList<Integer> exemptionList = new ArrayList<>();
+            //Raycast
+            VectorUtils.summonAndProcessRaycasts(eyePosition, endpoint, interactionRange, player, entityHitResultList, false, exemptionList);
 
-                //Offset vectors
-                //offsetXZ needs to be negative with my setup due to quad rendering shenanigans probably
-                //Has to be scaled with a ratio from the interactionRange
-                double turnRatio = ServerConfig.WIDTH_RATIO.get();
-                for(Map.Entry<Double, Item[]> entry: customWidthHashMap.entrySet()){
-                    if(Arrays.asList(entry.getValue()).contains(player.getMainHandItem().getItem())){
-                        turnRatio = entry.getKey();
-                    }
-                }
-                double offsetXZ = -(interactionRange * turnRatio);
-                double offsetY = (interactionRange * 0);
-                Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
-                Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
+            //OFFSET VECTORS
+            //offsetXZ needs to be negative with my setup due to quad rendering shenanigans probably
+            double widthRatio = DataUtils.getCorrectWidthRatio(customWidthHashMap, player);
+            double initialWidthDistance = 1;
+            //These offset values shouldn't be dependent on interactionRange as they were previously, a static number affected by the widthRatio works best here for wielding various weapons with different ranges. We want the horizontal range to only change with the config
+            double offsetXZ = -(initialWidthDistance * widthRatio);
+            //I want no vertical offset, so we keep it at 0
+            double offsetY = (initialWidthDistance * 0);
+            Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
+            Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
 
-                //Summons all remaining offsets & get their results
-                VectorUtils.raycastOffsetsSpread(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, interactionRange, player, entityHitResultList);
-                //Remove nulls
-                entityHitResultList.removeIf(Objects::isNull);
+            //Summons all remaining offsets & get their results
+            VectorUtils.raycastOffsetsSpread(chargeProgressPercentage, lastOffsetVector, lastOffsetVectorMirrored, scaledViewVector, endpoint, interactionRange, player, entityHitResultList);
+            //Remove nulls
+            entityHitResultList.removeIf(Objects::isNull);
 
-                //The rendering is done in RangeIndicatorHud
+            //The rendering is done in RangeIndicatorHud in Client
 
-                //debug Quads if needed
+            //DEBUG QUADS if needed
+            //Needed (for debug? Previously encapsulated everything within this method) or else we draw on all stages and some render weirdly
+//            if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
 //                if(Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
 //                    RenderDebug.debugRenderQuads(event, mainCameraPosition, viewVector, endpoint, lastOffsetVector, lastOffsetVectorMirrored, chargeProgressPercentage, interactionRange, player, partialTick);
 //                }
-            }
+//            }
         }
     }
 }

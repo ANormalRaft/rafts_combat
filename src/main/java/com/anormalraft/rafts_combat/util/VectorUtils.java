@@ -21,7 +21,7 @@ public class VectorUtils {
     //Log helper for vectors
     static Vec3 oldVector = new Vec3(0,0,0);
 
-    //Calculates useful sin cos values for vector offset calculations
+    //Calculates useful sin cos values for vector offset calculations using the player's camera rotation
     public static double[] sinCosAngleValues(){
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         float rotationAngleY = camera.getYRot() % 360;
@@ -43,7 +43,7 @@ public class VectorUtils {
         double cosValueRotY = Mth.cos((float) angleValueRotY);
 
         //Y offset data
-        double angleValueRotXZ = ((rotationAngleXZ)/360) * (2*Mth.PI);
+        double angleValueRotXZ = ((rotationAngleXZ)/360) * (2 * Mth.PI);
         double sinValueRotXZ = Mth.sin((float) angleValueRotXZ);
         double cosValueRotXZ = Mth.cos((float) angleValueRotXZ);
 
@@ -55,9 +55,9 @@ public class VectorUtils {
         return new double[]{sinValueRotY, cosValueRotY, sinValueRotXZ, cosValueRotXZ, sinValueRotRoll, cosValueRotRoll};
     }
 
-    //Calculates an offsetVector of the endpoint (+x means left, -x means right of crosshair)
+    //Calculates an offsetVector of the endpoint (+x means left, -x means right of crosshair from the player's camera)
     public static Vec3 calculateOffsetVector(double offsetXZ, double offsetY, Vec3 endpoint){
-        //Calculates an offsetVector of the endpoint
+        //useful sin and cos values using the rotation of the camera
         double[] sinCosValuesArray = sinCosAngleValues();
 
         //Result

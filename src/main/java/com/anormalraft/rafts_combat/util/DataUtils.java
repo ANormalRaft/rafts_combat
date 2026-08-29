@@ -1,5 +1,6 @@
 package com.anormalraft.rafts_combat.util;
 
+import com.anormalraft.rafts_combat.config.ServerConfig;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,6 +16,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.neoforged.neoforge.common.Tags;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,7 +25,7 @@ public class DataUtils {
 
     public static HashMap<TagKey<Item>, TagKey<Block>> itemTagsBlockTagsHashMap = new HashMap<>(5);
 
-    //Adds if there isn't an Entity id duplicate and if the raycast result isn't null
+    //Adds an EntityHitresult to the list if there isn't an Entity id duplicate and if the raycast result isn't null
     public static void nonDuplicatesAddToList(ArrayList<EntityHitResult> arrayList, EntityHitResult entityHitResult) {
         if (entityHitResult != null) {
             for (EntityHitResult element : arrayList) {
@@ -97,5 +99,22 @@ public class DataUtils {
     //Damage scaling calculation similar to exponential
     public static float calculateScaling(double chargeProgressPercent){
         return (float) (Math.pow(10,chargeProgressPercent) - 1) /(10-1);
+    }
+
+    //Returns correct width ratio depending on if held weapon is defined in the config or not
+    public static double getCorrectWidthRatio(HashMap<Double, Item[]> map, Player player){
+        for(Map.Entry<Double, Item[]> entry: map.entrySet()){
+            if(Arrays.asList(entry.getValue()).contains(player.getMainHandItem().getItem())){
+                return entry.getKey();
+            }
+        }
+        return ServerConfig.WIDTH_RATIO.get();
+    }
+
+    //Returns processed alpha value with color as it needs to change data formats
+    public static int processAlpha(int currentAlpha, String colorString){
+        String alphaString = Integer.toHexString(currentAlpha).toUpperCase();
+        String finalColorString = alphaString + colorString;
+        return Integer.parseUnsignedInt(finalColorString, 16);
     }
 }

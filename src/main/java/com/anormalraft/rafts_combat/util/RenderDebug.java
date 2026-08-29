@@ -2,6 +2,7 @@ package com.anormalraft.rafts_combat.util;
 
 import com.anormalraft.rafts_combat.client.ClientTasks;
 import com.anormalraft.rafts_combat.config.ClientConfig;
+import com.anormalraft.rafts_combat.config.ServerConfig;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -96,9 +97,10 @@ public class RenderDebug {
                 vertexBuffer.addVertex(pose, endpoint.toVector3f()).setUv(0, 0).setUv2(0, 0).setNormal(1, 1, 1).setColor(255, 0, 0, 255);
 
                 //Offset vectors
-                double turnRatio = 0.4;
-                double offsetXZ = -(interactionRange * turnRatio);
-                double offsetY = -(interactionRange * 0.1);
+                double widthRatio = ServerConfig.WIDTH_RATIO.get();
+                double initialWidthDistance = 1;
+                double offsetXZ = -(initialWidthDistance * widthRatio);
+                double offsetY = -(initialWidthDistance * 0.1);
                 Vec3 lastOffsetVector = VectorUtils.calculateOffsetVector(offsetXZ, offsetY, endpoint);
                 Vec3 lastOffsetVectorMirrored = VectorUtils.calculateOffsetVector(-offsetXZ, offsetY, endpoint);
 //                VectorUtils.renderOffsets(lastOffsetVector, lastOffsetVectorMirrored, eyePosition, endpoint, vertexBuffer, pose);

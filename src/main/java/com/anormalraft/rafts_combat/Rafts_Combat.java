@@ -8,6 +8,7 @@ import com.anormalraft.rafts_combat.networking.CustomWidthArrayPayload.CustomWid
 import com.anormalraft.rafts_combat.networking.MatchingTagsPayload.MatchingTagsPayload;
 import com.anormalraft.rafts_combat.networking.PayloadHousekeeping;
 import com.anormalraft.rafts_combat.util.DataUtils;
+import com.anormalraft.rafts_combat.util.RenderDebug;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -115,7 +116,7 @@ public class Rafts_Combat {
     @SubscribeEvent
     public void onRenderLevelEvent(RenderLevelStageEvent event) throws NoSuchFieldException, InvocationTargetException, NoSuchMethodException, IllegalAccessException {
         ClientTasks.progressivelySummonRaycasts(event);
-//        RenderDebug.debugRender(event);
+//        RenderDebug.debugRenderLines(event);
     }
 
     //Event is on the NeoForge event bus only on the physical client. Perform input management logic

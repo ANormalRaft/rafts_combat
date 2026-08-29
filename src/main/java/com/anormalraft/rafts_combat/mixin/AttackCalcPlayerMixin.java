@@ -69,12 +69,4 @@ public abstract class AttackCalcPlayerMixin extends LivingEntity {
         }
         return value;
     }
-
-    //    @Redirect(method = "attack", at=@At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;getAttributeValue(Lnet/minecraft/core/Holder;)D", ordinal = 0))
-//    public double setInitialDamage(Player instance, Holder holder){
-//        if(DataUtils.isHoldingCorrectItem(instance)){
-//            return 1.0F;
-//        }
-//        return (double) instance.getAttributeValue(Attributes.ATTACK_DAMAGE);
-//    }
 }
